@@ -236,10 +236,10 @@ class Union:
         return "Ti" + self.name.upper_camel_case
 
     def declr(self):
-        out = ["union " + self.type_name + " {"]
+        out = ["typedef union " + self.type_name + " {"]
         for x in self.variants:
             out += [f"  {x.declr()};"]
-        out += ["};"]
+        out += ["} " + self.type_name + ";"]
         return '\n'.join(out)
 
 

@@ -92,7 +92,11 @@ typedef struct TiNdArray {
 } TiNdArray;
 
 // union.argument_value
-union TiArgumentValue {};
+typedef union TiArgumentValue {
+  int32_t i32;
+  float f32;
+  TiNdArray ndarray;
+} TiArgumentValue;
 
 // structure.argument
 typedef struct TiArgument {

@@ -151,7 +151,7 @@
                 {
                     "name": "argument_value",
                     "type": "union",
-                    "fields": [
+                    "variants": [
                         {
                             "name": "i32",
                             "type": "int32_t"
