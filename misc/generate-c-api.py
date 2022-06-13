@@ -1,5 +1,6 @@
 from distutils import extension
 import json
+from os import system
 import re
 
 JSON = None
@@ -56,19 +57,23 @@ class DeclarationRegistry:
     def __iter__(self):
         return iter(self._inner)
 
+
 DECLR_REG = None
+
 
 class Alias:
     def __init__(self, j):
         self.name = Name(j["name"])
         self.id = f"alias.{self.name}"
         self.alias_of = j["alias_of"]
+
     @property
-    def type_name(self) ->str:
+    def type_name(self) -> str:
         return "Ti" + self.name.upper_camel_case
 
     def declr(self):
         return f"typedef {self.alias_of} {self.type_name};"
+
 
 class Definition:
     def __init__(self, j):
@@ -78,6 +83,7 @@ class Definition:
 
     def declr(self):
         return f"#define {self.name.screaming_snake_case} {self.value}"
+
 
 class Handle:
     def __init__(self, j):
@@ -115,6 +121,7 @@ class Enumeration:
     @property
     def type_name(self):
         return "Ti" + self.name.upper_camel_case
+
     def get_case_name(self, case_name: Name):
         return "TI_" + self.name.screaming_snake_case + "_" + case_name.screaming_snake_case
 
@@ -123,8 +130,9 @@ class Enumeration:
         for name, value in self.cases.items():
             out += [f"  {name} = {value},"]
         out += [f"  {self.get_case_name(Name('max_enum'))} = 0xffffffff,"]
-        out += ["};"]
+        out += ["} " + self.type_name + ";"]
         return '\n'.join(out)
+
 
 class BitField:
     def __init__(self, j):
@@ -148,29 +156,31 @@ class BitField:
     @property
     def type_name(self):
         return "Ti" + self.name.upper_camel_case + "FlagBits"
+
     @property
     def field_type_name(self):
         return "Ti" + self.name.upper_camel_case + "Flags"
+
     def get_flag_name(self, flag_name: Name):
         return "TI_" + self.name.screaming_snake_case + "_" + flag_name.screaming_snake_case + "_BIT"
 
-
     def declr(self):
-        out = ["enum " + self.type_name + " {"]
+        out = ["typedef enum " + self.type_name + " {"]
         for name, value in self.bits.items():
             out += [f"  {name} = {value},"]
-        out += ["};"]
+        out += ["} " + self.type_name + ";"]
         out += [f"typedef TiFlags {self.field_type_name};"]
         return '\n'.join(out)
-
 
 
 class CType:
     def __init__(self, name: str):
         self.name = name
+
     @property
     def type_name(self):
         return self.name
+
 
 class Field:
     def __init__(self, j):
@@ -190,6 +200,7 @@ class Field:
     def declr(self):
         return f"{self.type.type_name} {self.name}"
 
+
 class Structure:
     def __init__(self, j):
         self.name = Name(j["name"])
@@ -199,16 +210,17 @@ class Structure:
             for x in j["fields"]:
                 self.fields += [Field(x)]
 
-    @property 
+    @property
     def type_name(self):
         return "Ti" + self.name.upper_camel_case
 
     def declr(self):
-        out = ["struct " + self.type_name + " {"]
+        out = ["typedef struct " + self.type_name + " {"]
         for x in self.fields:
             out += [f"  {x.declr()};"]
-        out += ["};"]
+        out += ["} " + self.type_name + ";"]
         return '\n'.join(out)
+
 
 class Union:
     def __init__(self, j):
@@ -229,6 +241,7 @@ class Union:
             out += [f"  {x.declr()};"]
         out += ["};"]
         return '\n'.join(out)
+
 
 class Function:
     def __init__(self, j):
@@ -264,13 +277,15 @@ class Function:
 
     def declr(self):
         return_value_type = "void" if self.return_value_type == None else self.return_value_type.type_name
-        out = ["TI_DLL_EXPORT " + return_value_type + " TI_API_CALL " + self.func_name + "("]
+        out = ["TI_DLL_EXPORT " + return_value_type +
+               " TI_API_CALL " + self.func_name + "("]
         out += [',\n'.join(f"  {param.declr()}" for param in self.params)]
         out += [");"]
         return '\n'.join(out)
 
 
 MODULES = {}
+
 
 class Module:
     def __init__(self, j):
@@ -318,12 +333,19 @@ class Module:
 
         DECLR_REG = None
 
-
     def declr(self):
         out = ["#pragma once"]
 
         for x in self.required_modules:
             out += [f"#include <{x}>"]
+
+        out += [
+            "",
+            "#ifdef __cplusplus",
+            'extern "C" {',
+            "#endif // __cplusplus",
+            "",
+        ]
 
         for x in self.declr_reg:
             out += [
@@ -332,10 +354,15 @@ class Module:
                 self.declr_reg.resolve(x).declr(),
             ]
 
-        out += [""]
+        out += [
+            "",
+            "#ifdef __cplusplus",
+            '} // extern "C"',
+            "#endif // __cplusplus",
+            "",
+        ]
+
         return '\n'.join(out)
-
-
 
 
 def generate_module_header(j):
@@ -347,8 +374,11 @@ def generate_module_header(j):
         return
 
     print(f"processing module '{module_name}'")
-    with open(f"c_api/include/{module_name}", "w") as f:
+    path = f"c_api/include/{module_name}"
+    with open(path, "w") as f:
         f.write(module.declr())
+
+    system(f"clang-format {path} -i")
 
 
 for module in JSON["modules"]:
