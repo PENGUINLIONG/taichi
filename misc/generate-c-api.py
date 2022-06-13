@@ -1,3 +1,4 @@
+from distutils import extension
 import json
 import re
 
@@ -12,7 +13,7 @@ print("taichi c-api version is:", VERSION)
 
 class Name:
     def __init__(self, name: str):
-        assert re.match('^[a-z0-9_]+$', name)
+        assert re.match('^[@a-z0-9_]+$', name)
         self._segs = name.split("_")
 
     @property
@@ -229,6 +230,46 @@ class Union:
         out += ["};"]
         return '\n'.join(out)
 
+class Function:
+    def __init__(self, j):
+        self.name = Name(j["name"])
+        self.id = f"function.{self.name}"
+        self.version = 1
+        self.is_extension = False
+        self.return_value_type = None
+        self.params = []
+
+        if "version" in j:
+            self.version = j["version"]
+
+        if "is_extension" in j:
+            self.is_extension = j["is_extension"]
+
+        if "parameters" in j:
+            for x in j["parameters"]:
+                field = Field(x)
+                if field.name.snake_case == "@return":
+                    self.return_value_type = field.type
+                else:
+                    self.params += [field]
+
+    @property
+    def func_name(self):
+        name = "ti_" + self.name.snake_case
+        if self.is_extension:
+            name += "_ext"
+        if self.version > 1:
+            name += f"_{self.version}"
+        return name
+
+    def declr(self):
+        return_value_type = "void" if self.return_value_type == None else self.return_value_type.type_name
+        out = ["TI_DLL_EXPORT " + return_value_type + " TI_API_CALL " + self.func_name + "("]
+        out += [',\n'.join(f"  {param.declr()}" for param in self.params)]
+        out += [");"]
+        return '\n'.join(out)
+
+
 MODULES = {}
 
 class Module:
@@ -270,10 +311,13 @@ class Module:
                     self.declr_reg.register(Structure(k))
                 elif ty == "union":
                     self.declr_reg.register(Union(k))
+                elif ty == "function":
+                    self.declr_reg.register(Function(k))
                 else:
                     print(f"ignored unrecognized type declaration '{k}'")
 
         DECLR_REG = None
+
 
     def declr(self):
         out = ["#pragma once"]
