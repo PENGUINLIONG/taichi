@@ -173,13 +173,13 @@ TiMemory ti_import_vulkan_runtime_allocation(
   vkapi::IVkBuffer buffer =
       vkapi::create_buffer(vk_runtime.vk_device(), interop_info->buffer,
                            interop_info->size, interop_info->usage);
-  return (TiMemory)vk_runtime.import_vkbuffer(buffer).alloc_id;
+  return (TiMemory)(size_t)vk_runtime.import_vkbuffer(buffer).alloc_id;
 }
 void ti_export_vulkan_memory(TiRuntime runtime,
                              TiMemory devmem,
                              TiVulkanMemoryInteropInfo *interop_info) {
   VulkanRuntime *runtime2 = ((Runtime *)runtime)->as_vk();
-  taichi::lang::DeviceAllocationId devalloc_id = devmem;
+  taichi::lang::DeviceAllocationId devalloc_id = (size_t)devmem;
   taichi::lang::DeviceAllocation devalloc{&runtime2->get(), devalloc_id};
   vkapi::IVkBuffer buffer = runtime2->get_vk().get_vkbuffer(devalloc);
   interop_info->buffer = buffer.get()->buffer;
