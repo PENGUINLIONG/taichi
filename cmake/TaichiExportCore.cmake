@@ -18,7 +18,7 @@ target_include_directories(${TAICHI_C_API_LIB_NAME} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/external/spdlog/include
     ${CMAKE_CURRENT_SOURCE_DIR}/external/Vulkan-Headers/include
     ${CMAKE_CURRENT_SOURCE_DIR}/external/SPIRV-Tools/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/external/Vulkan-Headers/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/external/VulkanMemoryAllocator/include
     ${CMAKE_CURRENT_SOURCE_DIR}/external/volk
 )
 
