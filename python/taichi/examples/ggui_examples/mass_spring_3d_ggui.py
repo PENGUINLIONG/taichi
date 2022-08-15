@@ -1,7 +1,7 @@
 import taichi as ti
 
 arch = ti.vulkan if ti._lib.core.with_vulkan() else ti.cuda
-ti.init(arch=arch)
+ti.init(arch=arch, offline_cache=False)
 
 n = 128
 quad_size = 1.0 / n
@@ -131,7 +131,7 @@ def main():
     current_t = 0.0
     initialize_mass_points()
 
-    while window.running:
+    for i in range(50):
         if current_t > 1.5:
             # Reset
             initialize_mass_points()
@@ -165,3 +165,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    ti.profiler.print_scoped_profiler_info()

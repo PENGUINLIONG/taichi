@@ -221,12 +221,14 @@ int Stmt::locate_operand(Stmt **stmt) {
 
 void Block::erase(int location) {
   auto iter = locate(location);
-  erase_range(iter, std::next(iter));
+  trash_bin.push_back(std::move(*iter));
+  statements.erase(iter);
 }
 
 void Block::erase(Stmt *stmt) {
   auto iter = find(stmt);
-  erase_range(iter, std::next(iter));
+  trash_bin.push_back(std::move(*iter));
+  statements.erase(iter);
 }
 
 void Block::erase_range(stmt_vector::iterator begin,

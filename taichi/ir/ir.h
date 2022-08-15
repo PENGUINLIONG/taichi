@@ -598,6 +598,12 @@ class Stmt : public IRNode {
   }
 };
 
+struct IdentifierHasher {
+  size_t operator()(const Identifier& id) const {
+    return (std::hash<std::string>()(id.name())) ^ id.id;
+  }
+};
+
 class Block : public IRNode {
  public:
   Stmt *parent_stmt{nullptr};
@@ -607,7 +613,7 @@ class Block : public IRNode {
 
   // Only used in frontend. Stores LoopIndexStmt or BinaryOpStmt for loop
   // variables, and AllocaStmt for other variables.
-  std::map<Identifier, Stmt *> local_var_to_stmt;
+  std::unordered_map<Identifier, Stmt *, IdentifierHasher> local_var_to_stmt;
 
   Block() {
     parent_stmt = nullptr;

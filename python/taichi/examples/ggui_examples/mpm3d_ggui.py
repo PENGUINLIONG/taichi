@@ -3,7 +3,7 @@ import numpy as np
 import taichi as ti
 
 arch = ti.vulkan if ti._lib.core.with_vulkan() else ti.cuda
-ti.init(arch=arch)
+ti.init(arch=arch, offline_cache=False)
 
 #dim, n_grid, steps, dt = 2, 128, 20, 2e-4
 #dim, n_grid, steps, dt = 2, 256, 32, 1e-4
@@ -315,7 +315,7 @@ def render():
 def main():
     frame_id = 0
 
-    while window.running:
+    for i in range(50):
         #print("heyyy ",frame_id)
         frame_id += 1
         frame_id = frame_id % 256
@@ -331,3 +331,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    ti.profiler.print_scoped_profiler_info()
