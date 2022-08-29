@@ -46,6 +46,11 @@
                     "is_dispatchable": true
                 },
                 {
+                    "name": "queue",
+                    "type": "handle",
+                    "is_dispatchable": true
+                },
+                {
                     "name": "aot_module",
                     "type": "handle",
                     "is_dispatchable": true
@@ -95,6 +100,15 @@
                     "name": "arch",
                     "type": "enumeration",
                     "inc_cases": "archs"
+                },
+                {
+                    "name": "queue_capability",
+                    "type": "bit_field",
+                    "bits": {
+                        "copy": 0,
+                        "compute": 1,
+                        "graphics": 2
+                    }
                 },
                 {
                     "name": "data_type",
@@ -428,6 +442,32 @@
                     ]
                 },
                 {
+                    "name": "create_queue",
+                    "type": "function",
+                    "parameters": [
+                        {
+                            "name": "@return",
+                            "type": "handle.runtime"
+                        },
+                        {
+                            "name": "capabilities",
+                            "type": "bit_field.queue_capability"
+                        }
+                    ]
+                },
+                {
+                    "name": "destroy_queue",
+                    "type": "function",
+                    "parameters": [
+                        {
+                            "type": "handle.runtime"
+                        },
+                        {
+                            "type": "handle.queue"
+                        }
+                    ]
+                },
+                {
                     "name": "allocate_memory",
                     "type": "function",
                     "parameters": [
@@ -442,6 +482,11 @@
                             "name": "allocate_info",
                             "type": "structure.memory_allocate_info",
                             "by_ref": true
+                        },
+                        {
+                            "name": "owner_queue",
+                            "type": "handle.queue",
+                            "default": "definition.null_handle"
                         }
                     ]
                 },
@@ -500,6 +545,11 @@
                             "name": "allocate_info",
                             "type": "structure.texture_allocate_info",
                             "by_ref": true
+                        },
+                        {
+                            "name": "owner_queue",
+                            "type": "handle.queue",
+                            "default": "definition.null_handle"
                         }
                     ]
                 },
@@ -554,6 +604,10 @@
                             "name": "src_memory",
                             "type": "structure.memory_slice",
                             "by_ref": true
+                        },
+                        {
+                            "type": "handle.queue",
+                            "default": "definition.null_handle"
                         }
                     ]
                 },
@@ -574,6 +628,28 @@
                             "name": "src_texture",
                             "type": "structure.texture_slice",
                             "by_ref": true
+                        },
+                        {
+                            "type": "handle.queue",
+                            "default": "definition.null_handle"
+                        }
+                    ]
+                },
+                {
+                    "name": "transition_memory",
+                    "type": "function",
+                    "is_device_command": true,
+                    "parameters": [
+                        {
+                            "type": "handle.runtime"
+                        },
+                        {
+                            "type": "handle.memory"
+                        },
+                        {
+                            "name": "new_owner_queue",
+                            "type": "handle.queue",
+                            "default": "definition.null_handle"
                         }
                     ]
                 },
@@ -589,8 +665,13 @@
                             "type": "handle.texture"
                         },
                         {
-                            "name": "layout",
+                            "name": "new_layout",
                             "type": "enumeration.texture_layout"
+                        },
+                        {
+                            "name": "new_owner_queue",
+                            "type": "handle.queue",
+                            "default": "definition.null_handle"
                         }
                     ]
                 },
@@ -613,6 +694,10 @@
                             "name": "args",
                             "type": "structure.argument",
                             "count": "arg_count"
+                        },
+                        {
+                            "type": "handle.queue",
+                            "default": "definition.null_handle"
                         }
                     ]
                 },
@@ -635,6 +720,10 @@
                             "name": "args",
                             "type": "structure.named_argument",
                             "count": "arg_count"
+                        },
+                        {
+                            "type": "handle.queue",
+                            "default": "definition.null_handle"
                         }
                     ]
                 },
@@ -648,6 +737,10 @@
                         },
                         {
                             "type": "handle.event"
+                        },
+                        {
+                            "type": "handle.queue",
+                            "default": "definition.null_handle"
                         }
                     ]
                 },
@@ -661,6 +754,10 @@
                         },
                         {
                             "type": "handle.event"
+                        },
+                        {
+                            "type": "handle.queue",
+                            "default": "definition.null_handle"
                         }
                     ]
                 },
@@ -674,6 +771,10 @@
                         },
                         {
                             "type": "handle.event"
+                        },
+                        {
+                            "type": "handle.queue",
+                            "default": "definition.null_handle"
                         }
                     ]
                 },
@@ -683,6 +784,10 @@
                     "parameters": [
                         {
                             "type": "handle.runtime"
+                        },
+                        {
+                            "type": "handle.queue",
+                            "default": "definition.null_handle"
                         }
                     ]
                 },
@@ -692,6 +797,10 @@
                     "parameters": [
                         {
                             "type": "handle.runtime"
+                        },
+                        {
+                            "type": "handle.queue",
+                            "default": "definition.null_handle"
                         }
                     ]
                 },
@@ -798,6 +907,20 @@
                         },
                         {
                             "name": "graphics_queue_family_index",
+                            "type": "uint32_t"
+                        }
+                    ]
+                },
+                {
+                    "name": "vulkan_queue_interop_info",
+                    "type": "structure",
+                    "fields": [
+                        {
+                            "name": "queue",
+                            "type": "VkQueue"
+                        },
+                        {
+                            "name": "queue_family_index",
                             "type": "uint32_t"
                         }
                     ]
@@ -929,6 +1052,49 @@
                             "name": "interop_info",
                             "type": "structure.vulkan_runtime_interop_info",
                             "by_mut": true
+                        }
+                    ]
+                },
+                {
+                    "name": "import_vulkan_queue",
+                    "type": "function",
+                    "parameters": [
+                        {
+                            "name": "@return",
+                            "type": "handle.queue"
+                        },
+                        {
+                            "name": "interop_info",
+                            "type": "structure.vulkan_queue_interop_info",
+                            "by_ref": true
+                        }
+                    ]
+                },
+                {
+                    "name": "export_vulkan_queue",
+                    "type": "function",
+                    "parameters": [
+                        {
+                            "type": "handle.queue"
+                        },
+                        {
+                            "name": "interop_info",
+                            "type": "structure.vulkan_queue_interop_info",
+                            "by_mut": true
+                        }
+                    ]
+                },
+                {
+                    "name": "get_vulkan_queue_command_buffer",
+                    "type": "function",
+                    "parameters": [
+                        {
+                            "name": "@return",
+                            "type": "VkCommandBuffer"
+                        },
+                        {
+                            "type": "handle.queue",
+                            "default": "definition.null_handle"
                         }
                     ]
                 },

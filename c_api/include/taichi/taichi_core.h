@@ -3,7 +3,8 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif  // __cplusplus
+#endif // __cplusplus
+
 
 // alias.bool
 typedef uint32_t TiBool;
@@ -21,25 +22,28 @@ typedef uint32_t TiFlags;
 #define TI_NULL_HANDLE 0
 
 // handle.runtime
-typedef struct TiRuntime_t *TiRuntime;
+typedef struct TiRuntime_t* TiRuntime;
+
+// handle.queue
+typedef struct TiQueue_t* TiQueue;
 
 // handle.aot_module
-typedef struct TiAotModule_t *TiAotModule;
+typedef struct TiAotModule_t* TiAotModule;
 
 // handle.event
-typedef struct TiEvent_t *TiEvent;
+typedef struct TiEvent_t* TiEvent;
 
 // handle.memory
-typedef struct TiMemory_t *TiMemory;
+typedef struct TiMemory_t* TiMemory;
 
 // handle.texture
-typedef struct TiTexture_t *TiTexture;
+typedef struct TiTexture_t* TiTexture;
 
 // handle.kernel
-typedef struct TiKernel_t *TiKernel;
+typedef struct TiKernel_t* TiKernel;
 
 // handle.compute_graph
-typedef struct TiComputeGraph_t *TiComputeGraph;
+typedef struct TiComputeGraph_t* TiComputeGraph;
 
 // enumeration.error
 typedef enum TiError {
@@ -67,11 +71,20 @@ typedef enum TiArch {
   TI_ARCH_METAL = 6,
   TI_ARCH_OPENGL = 7,
   TI_ARCH_DX11 = 8,
-  TI_ARCH_OPENCL = 9,
-  TI_ARCH_AMDGPU = 10,
-  TI_ARCH_VULKAN = 11,
+  TI_ARCH_DX12 = 9,
+  TI_ARCH_OPENCL = 10,
+  TI_ARCH_AMDGPU = 11,
+  TI_ARCH_VULKAN = 12,
   TI_ARCH_MAX_ENUM = 0xffffffff,
 } TiArch;
+
+// bit_field.queue_capability
+typedef enum TiQueueCapabilityFlagBits {
+  TI_QUEUE_CAPABILITY_COPY_BIT = 1 << 0,
+  TI_QUEUE_CAPABILITY_COMPUTE_BIT = 1 << 1,
+  TI_QUEUE_CAPABILITY_GRAPHICS_BIT = 1 << 2,
+} TiQueueCapabilityFlagBits;
+typedef TiFlags TiQueueCapabilityFlags;
 
 // enumeration.data_type
 typedef enum TiDataType {
@@ -273,117 +286,196 @@ typedef struct TiArgument {
 
 // structure.named_argument
 typedef struct TiNamedArgument {
-  const char *name;
+  const char* name;
   TiArgument argument;
 } TiNamedArgument;
 
 // function.get_last_error
-TI_DLL_EXPORT TiError TI_API_CALL ti_get_last_error(uint64_t message_size,
-                                                    char *message);
+TI_DLL_EXPORT TiError TI_API_CALL ti_get_last_error(
+  uint64_t message_size,
+   char* message
+);
 
 // function.set_last_error
-TI_DLL_EXPORT void TI_API_CALL ti_set_last_error(TiError error,
-                                                 const char *message);
+TI_DLL_EXPORT void TI_API_CALL ti_set_last_error(
+  TiError error,
+  const char* message
+);
 
 // function.create_runtime
-TI_DLL_EXPORT TiRuntime TI_API_CALL ti_create_runtime(TiArch arch);
+TI_DLL_EXPORT TiRuntime TI_API_CALL ti_create_runtime(
+  TiArch arch
+);
 
 // function.destroy_runtime
-TI_DLL_EXPORT void TI_API_CALL ti_destroy_runtime(TiRuntime runtime);
+TI_DLL_EXPORT void TI_API_CALL ti_destroy_runtime(
+  TiRuntime runtime
+);
+
+// function.create_queue
+TI_DLL_EXPORT TiRuntime TI_API_CALL ti_create_queue(
+  TiQueueCapabilityFlagBits capabilities
+);
+
+// function.destroy_queue
+TI_DLL_EXPORT void TI_API_CALL ti_destroy_queue(
+  TiRuntime runtime,
+  TiQueue queue
+);
 
 // function.allocate_memory
-TI_DLL_EXPORT TiMemory TI_API_CALL
-ti_allocate_memory(TiRuntime runtime,
-                   const TiMemoryAllocateInfo *allocate_info);
+TI_DLL_EXPORT TiMemory TI_API_CALL ti_allocate_memory(
+  TiRuntime runtime,
+  const TiMemoryAllocateInfo* allocate_info,
+  TiQueue owner_queue
+);
 
 // function.free_memory
-TI_DLL_EXPORT void TI_API_CALL ti_free_memory(TiRuntime runtime,
-                                              TiMemory memory);
+TI_DLL_EXPORT void TI_API_CALL ti_free_memory(
+  TiRuntime runtime,
+  TiMemory memory
+);
 
 // function.map_memory
-TI_DLL_EXPORT void *TI_API_CALL ti_map_memory(TiRuntime runtime,
-                                              TiMemory memory);
+TI_DLL_EXPORT void* TI_API_CALL ti_map_memory(
+  TiRuntime runtime,
+  TiMemory memory
+);
 
 // function.unmap_memory
-TI_DLL_EXPORT void TI_API_CALL ti_unmap_memory(TiRuntime runtime,
-                                               TiMemory memory);
+TI_DLL_EXPORT void TI_API_CALL ti_unmap_memory(
+  TiRuntime runtime,
+  TiMemory memory
+);
 
 // function.allocate_texture
-TI_DLL_EXPORT TiTexture TI_API_CALL
-ti_allocate_texture(TiRuntime runtime,
-                    const TiTextureAllocateInfo *allocate_info);
+TI_DLL_EXPORT TiTexture TI_API_CALL ti_allocate_texture(
+  TiRuntime runtime,
+  const TiTextureAllocateInfo* allocate_info,
+  TiQueue owner_queue
+);
 
 // function.free_texture
-TI_DLL_EXPORT void TI_API_CALL ti_free_texture(TiRuntime runtime,
-                                               TiTexture texture);
+TI_DLL_EXPORT void TI_API_CALL ti_free_texture(
+  TiRuntime runtime,
+  TiTexture texture
+);
 
 // function.create_event
-TI_DLL_EXPORT TiEvent TI_API_CALL ti_create_event(TiRuntime runtime);
+TI_DLL_EXPORT TiEvent TI_API_CALL ti_create_event(
+  TiRuntime runtime
+);
 
 // function.destroy_event
-TI_DLL_EXPORT void TI_API_CALL ti_destroy_event(TiEvent event);
+TI_DLL_EXPORT void TI_API_CALL ti_destroy_event(
+  TiEvent event
+);
 
 // function.copy_memory_device_to_device
-TI_DLL_EXPORT void TI_API_CALL
-ti_copy_memory_device_to_device(TiRuntime runtime,
-                                const TiMemorySlice *dst_memory,
-                                const TiMemorySlice *src_memory);
+TI_DLL_EXPORT void TI_API_CALL ti_copy_memory_device_to_device(
+  TiRuntime runtime,
+  const TiMemorySlice* dst_memory,
+  const TiMemorySlice* src_memory,
+  TiQueue queue
+);
 
 // function.copy_texture_device_to_device
-TI_DLL_EXPORT void TI_API_CALL
-ti_copy_texture_device_to_device(TiRuntime runtime,
-                                 const TiTextureSlice *dst_texture,
-                                 const TiTextureSlice *src_texture);
+TI_DLL_EXPORT void TI_API_CALL ti_copy_texture_device_to_device(
+  TiRuntime runtime,
+  const TiTextureSlice* dst_texture,
+  const TiTextureSlice* src_texture,
+  TiQueue queue
+);
+
+// function.transition_memory
+TI_DLL_EXPORT void TI_API_CALL ti_transition_memory(
+  TiRuntime runtime,
+  TiMemory memory,
+  TiQueue new_owner_queue
+);
 
 // function.transition_texture
-TI_DLL_EXPORT void TI_API_CALL ti_transition_texture(TiRuntime runtime,
-                                                     TiTexture texture,
-                                                     TiTextureLayout layout);
+TI_DLL_EXPORT void TI_API_CALL ti_transition_texture(
+  TiRuntime runtime,
+  TiTexture texture,
+  TiTextureLayout new_layout,
+  TiQueue new_owner_queue
+);
 
 // function.launch_kernel
-TI_DLL_EXPORT void TI_API_CALL ti_launch_kernel(TiRuntime runtime,
-                                                TiKernel kernel,
-                                                uint32_t arg_count,
-                                                const TiArgument *args);
+TI_DLL_EXPORT void TI_API_CALL ti_launch_kernel(
+  TiRuntime runtime,
+  TiKernel kernel,
+  uint32_t arg_count,
+  const TiArgument* args,
+  TiQueue queue
+);
 
 // function.launch_compute_graph
-TI_DLL_EXPORT void TI_API_CALL
-ti_launch_compute_graph(TiRuntime runtime,
-                        TiComputeGraph compute_graph,
-                        uint32_t arg_count,
-                        const TiNamedArgument *args);
+TI_DLL_EXPORT void TI_API_CALL ti_launch_compute_graph(
+  TiRuntime runtime,
+  TiComputeGraph compute_graph,
+  uint32_t arg_count,
+  const TiNamedArgument* args,
+  TiQueue queue
+);
 
 // function.signal_event
-TI_DLL_EXPORT void TI_API_CALL ti_signal_event(TiRuntime runtime,
-                                               TiEvent event);
+TI_DLL_EXPORT void TI_API_CALL ti_signal_event(
+  TiRuntime runtime,
+  TiEvent event,
+  TiQueue queue
+);
 
 // function.reset_event
-TI_DLL_EXPORT void TI_API_CALL ti_reset_event(TiRuntime runtime, TiEvent event);
+TI_DLL_EXPORT void TI_API_CALL ti_reset_event(
+  TiRuntime runtime,
+  TiEvent event,
+  TiQueue queue
+);
 
 // function.wait_event
-TI_DLL_EXPORT void TI_API_CALL ti_wait_event(TiRuntime runtime, TiEvent event);
+TI_DLL_EXPORT void TI_API_CALL ti_wait_event(
+  TiRuntime runtime,
+  TiEvent event,
+  TiQueue queue
+);
 
 // function.submit
-TI_DLL_EXPORT void TI_API_CALL ti_submit(TiRuntime runtime);
+TI_DLL_EXPORT void TI_API_CALL ti_submit(
+  TiRuntime runtime,
+  TiQueue queue
+);
 
 // function.wait
-TI_DLL_EXPORT void TI_API_CALL ti_wait(TiRuntime runtime);
+TI_DLL_EXPORT void TI_API_CALL ti_wait(
+  TiRuntime runtime,
+  TiQueue queue
+);
 
 // function.load_aot_module
-TI_DLL_EXPORT TiAotModule TI_API_CALL
-ti_load_aot_module(TiRuntime runtime, const char *module_path);
+TI_DLL_EXPORT TiAotModule TI_API_CALL ti_load_aot_module(
+  TiRuntime runtime,
+  const char* module_path
+);
 
 // function.destroy_aot_module
-TI_DLL_EXPORT void TI_API_CALL ti_destroy_aot_module(TiAotModule aot_module);
+TI_DLL_EXPORT void TI_API_CALL ti_destroy_aot_module(
+  TiAotModule aot_module
+);
 
 // function.get_aot_module_kernel
-TI_DLL_EXPORT TiKernel TI_API_CALL
-ti_get_aot_module_kernel(TiAotModule aot_module, const char *name);
+TI_DLL_EXPORT TiKernel TI_API_CALL ti_get_aot_module_kernel(
+  TiAotModule aot_module,
+  const char* name
+);
 
 // function.get_aot_module_compute_graph
-TI_DLL_EXPORT TiComputeGraph TI_API_CALL
-ti_get_aot_module_compute_graph(TiAotModule aot_module, const char *name);
+TI_DLL_EXPORT TiComputeGraph TI_API_CALL ti_get_aot_module_compute_graph(
+  TiAotModule aot_module,
+  const char* name
+);
 
 #ifdef __cplusplus
-}  // extern "C"
-#endif  // __cplusplus
+} // extern "C"
+#endif // __cplusplus
