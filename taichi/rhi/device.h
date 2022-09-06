@@ -15,37 +15,10 @@ constexpr size_t kBufferSizeEntireSize = size_t(-1);
 // Or the backend runtime itself
 // Capabilities are per-device
 enum class DeviceCapability : uint32_t {
-  // Vulkan Caps
-  vk_api_version,
-  vk_has_physical_features2,
-  vk_has_external_memory,
-  vk_has_surface,
-  vk_has_presentation,
-  // SPIR-V Caps
-  spirv_version,
-  spirv_has_int8,
-  spirv_has_int16,
-  spirv_has_int64,
-  spirv_has_float16,
-  spirv_has_float64,
-  spirv_has_atomic_i64,
-  spirv_has_atomic_float16,  // load, store, exchange
-  spirv_has_atomic_float16_add,
-  spirv_has_atomic_float16_minmax,
-  spirv_has_atomic_float,  // load, store, exchange
-  spirv_has_atomic_float_add,
-  spirv_has_atomic_float_minmax,
-  spirv_has_atomic_float64,  // load, store, exchange
-  spirv_has_atomic_float64_add,
-  spirv_has_atomic_float64_minmax,
-  spirv_has_variable_ptr,
-  spirv_has_physical_storage_buffer,
-  spirv_has_subgroup_basic,
-  spirv_has_subgroup_vote,
-  spirv_has_subgroup_arithmetic,
-  spirv_has_subgroup_ballot,
-  // Graphics Caps,
-  wide_lines
+#define PER_DEVICE_CAPABILITY(x) x,
+#include "taichi/inc/device_capabilities.inc.h"
+#undef PER_DEVICE_CAPABILITY
+  max_enum_,
 };
 
 enum class BlendOp : uint32_t { add, subtract, reverse_subtract, min, max };

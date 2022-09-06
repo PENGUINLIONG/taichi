@@ -310,12 +310,42 @@ def check_require_version(require_version):
         )
 
 
+def translate_vulkan_capabilities(caps):
+    assert "vk_api_version" in caps, "capability `vk_api_version` must be specified (can be `1.0`, `1.1`, `1.2` or `1.3`)"
+
+    make_vk_api_version = lambda major, minor: (major << 22) | (minor << 12)
+
+    VK_API_VERSION_1_0 = make_vk_api_version(1, 0)
+    VK_API_VERSION_1_1 = make_vk_api_version(1, 1)
+    VK_API_VERSION_1_2 = make_vk_api_version(1, 2)
+    VK_API_VERSION_1_3 = make_vk_api_version(1, 3)
+    vk_api_version_map = {
+        "1.0": VK_API_VERSION_1_0,
+        "1.1": VK_API_VERSION_1_1,
+        "1.2": VK_API_VERSION_1_2,
+        "1.3": VK_API_VERSION_1_3,
+    }
+    vk_api_version = vk_api_version_map[caps["vk_api_version"]]
+
+    if vk_api_version >= VK_API_VERSION_1_0:
+        
+
+
+
+
+def translate_capabilities(arch, caps):
+    out = {}
+        out[_ti_core.vk_api_version] = caps[1]
+    caps = _ti_core.vk_api_version
+
+
 def init(arch=None,
          default_fp=None,
          default_ip=None,
          _test_mode=False,
          enable_fallback=True,
          require_version=None,
+         capabilities=None,
          **kwargs):
     """Initializes the Taichi runtime.
 
@@ -410,7 +440,7 @@ def init(arch=None,
 
     # compiler configurations (ti.cfg):
     for key in dir(cfg):
-        if key in ['arch', 'default_fp', 'default_ip']:
+        if key in ['arch', 'default_fp', 'default_ip', 'capabilities']:
             continue
         _cast = type(getattr(cfg, key))
         if _cast is bool:
@@ -450,6 +480,10 @@ def init(arch=None,
         return spec_cfg
 
     get_default_kernel_profiler().set_kernel_profiler_mode(cfg.kernel_profiler)
+
+    # Override capabilities if the user has specified it explicitly.
+    if capabilities:
+        cfg.capabilities = translate_capabilities(capabilities)
 
     # create a new program:
     impl.get_runtime().create_program()

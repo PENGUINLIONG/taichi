@@ -70,6 +70,12 @@ void export_lang(py::module &m) {
 #undef PER_ARCH
       .export_values();
 
+  py::enum_<DeviceCapability>(m, "DeviceCapability", py::arithmetic())
+#define PER_DEVICE_CAPABILITY(x) .value(#x, DeviceCapability::x)
+#include "taichi/inc/device_capabilities.inc.h"
+#undef PER_DEVICE_CAPABILITY
+    .export_values();
+
   m.def("arch_name", arch_name);
   m.def("arch_from_name", arch_from_name);
 
@@ -238,7 +244,7 @@ void export_lang(py::module &m) {
       .def_readwrite("offline_cache_cleaning_factor",
                      &CompileConfig::offline_cache_cleaning_factor)
       .def_readwrite("num_compile_threads", &CompileConfig::num_compile_threads)
-      .def_readwrite("vk_api_version", &CompileConfig::vk_api_version);
+      .def_readwrite("capabilities", &CompileConfig::capabilities);
 
   m.def("reset_default_compile_config",
         [&]() { default_compile_config = CompileConfig(); });

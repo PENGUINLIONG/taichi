@@ -116,18 +116,14 @@ void VulkanProgramImpl::materialize_runtime(MemoryPool *memory_pool,
 #endif
 
   VulkanDeviceCreator::Params evd_params;
-  if (config->vk_api_version.empty()) {
+  auto it = config->capabilities.find((uint32_t)DeviceCapability::vk_api_version);
+  if (it != config->capabilities.end()) {
     // Don't assign the API version by default. Otherwise we have to provide all
     // the extensions to be enabled. `VulkanDeviceCreator` would automatically
     // select a usable version for us.
     evd_params.api_version = std::nullopt;
   } else {
-    size_t idot1 = config->vk_api_version.find('.');
-    size_t idot2 = config->vk_api_version.find('.', idot1 + 1);
-    int32_t major = std::atoll(config->vk_api_version.c_str());
-    int32_t minor = std::atoll(config->vk_api_version.c_str() + idot1 + 1);
-    int32_t patch = std::atoll(config->vk_api_version.c_str() + idot2 + 1);
-    evd_params.api_version = VK_MAKE_API_VERSION(0, major, minor, patch);
+    evd_params.api_version = it->second;
   }
 #if !defined(ANDROID)
   if (glfw_window) {
@@ -152,6 +148,22 @@ void VulkanProgramImpl::materialize_runtime(MemoryPool *memory_pool,
 #endif
 
   embedded_device_ = std::make_unique<VulkanDeviceCreator>(evd_params);
+
+  // Override capabilities if the user has explicitly specified it.
+  if (!config->capabilities.empty()) {
+    for (uint32_t cap = 0; cap < (uint32_t)DeviceCapability::max_enum_; ++cap) {
+      auto it = config->capabilities.find(cap);
+      if (it == config->capabilities.end()) {
+        embedded_device_->device()->set_cap((DeviceCapability)cap, 0);
+      } else {
+        uint32_t v = embedded_device_->device()->get_cap((DeviceCapability)cap);
+        if (it->second < v) {
+          v = it->second;
+        }
+        embedded_device_->device()->set_cap((DeviceCapability)cap, v);
+      }
+    }
+  }
 
   gfx::GfxRuntime::Params params;
   params.host_result_buffer = *result_buffer_ptr;

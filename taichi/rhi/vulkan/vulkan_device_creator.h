@@ -74,6 +74,7 @@ class TI_DLL_EXPORT VulkanDeviceCreator {
   void setup_debug_messenger();
   void create_surface();
   void pick_physical_device();
+  void setup_capabilities();
   void create_logical_device(bool manual_create);
 
   uint32_t api_version_{VK_API_VERSION_1_0};

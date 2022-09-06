@@ -3,8 +3,7 @@
 #include "taichi/rhi/arch.h"
 #include "taichi/util/lang_util.h"
 
-namespace taichi {
-namespace lang {
+TLANG_NAMESPACE_BEGIN
 
 struct CompileConfig {
   Arch arch;
@@ -105,7 +104,8 @@ struct CompileConfig {
   double offline_cache_cleaning_factor{0.25};  // [0.f, 1.f]
 
   int num_compile_threads{0};
-  std::string vk_api_version;
+  // Pairs of (DeviceCapability, uint32_t).
+  std::map<uint32_t, uint32_t> capabilities;
 
   CompileConfig();
 };

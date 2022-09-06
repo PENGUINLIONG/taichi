@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
+#include <set>
 
 #include "taichi/rhi/vulkan/vulkan_common.h"
 #include "taichi/rhi/vulkan/vulkan_loader.h"
@@ -403,6 +404,133 @@ void VulkanDeviceCreator::pick_physical_device() {
   queue_family_indices_ = find_queue_families(physical_device_, surface_);
 }
 
+namespace {
+
+// Extensions we used that have been incorporated into the Vulkan core profile.
+const char* vulkan_1_3_core_exts[] = {
+};
+const char* vulkan_1_2_core_exts[] = {
+  VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+  VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME,
+};
+const char* vulkan_1_1_core_exts[] = {
+  VK_KHR_VARIABLE_POINTERS_EXTENSION_NAME,
+};
+
+} // namespace
+
+void VulkanDeviceCreator::setup_capabilities() {
+  // Vulkan API specification version.
+  VkPhysicalDeviceProperties physical_device_properties{};
+  vkGetPhysicalDeviceProperties(physical_device_, &physical_device_properties);
+  TI_INFO("Vulkan Device \"{}\" supports Vulkan {} version {}.{}.{}",
+          physical_device_properties.deviceName,
+          VK_API_VERSION_VARIANT(physical_device_properties.apiVersion),
+          VK_API_VERSION_MAJOR(physical_device_properties.apiVersion),
+          VK_API_VERSION_MINOR(physical_device_properties.apiVersion),
+          VK_API_VERSION_PATCH(physical_device_properties.apiVersion));
+  uint32_t vk_api_version = physical_device_properties.apiVersion;
+  ti_device_->set_cap(DeviceCapability::vk_api_version, vk_api_version);
+
+  // SPIR-V specification version and extensions incorporated into the
+  // specification.
+  uint32_t spirv_version;
+  if (vk_api_version >= VK_API_VERSION_1_3) {
+    spirv_version = 0x10500;
+  } else if (vk_api_version >= VK_API_VERSION_1_2) {
+    spirv_version = 0x10500;
+  } else if (vk_api_version >= VK_API_VERSION_1_1){
+    spirv_version = 0x10300;
+  } else {
+    spirv_version = 0x10000;
+  }
+  ti_device_->set_cap(DeviceCapability::spirv_version, spirv_version);
+
+  // Vulkan 1.0 features.
+  VkPhysicalDeviceFeatures device_supported_features{};
+  vkGetPhysicalDeviceFeatures(physical_device_, &device_supported_features);
+  if (device_supported_features.shaderInt16) {
+    ti_device_->set_cap(DeviceCapability::spirv_has_int16, true);
+  }
+  if (device_supported_features.shaderInt64) {
+    ti_device_->set_cap(DeviceCapability::spirv_has_int64, true);
+  }
+  if (device_supported_features.shaderFloat64) {
+    ti_device_->set_cap(DeviceCapability::spirv_has_float64, true);
+  }
+  if (device_supported_features.wideLines) {
+    ti_device_->set_cap(DeviceCapability::wide_lines, true);
+  } else {
+    TI_WARN_IF(params_.is_for_ui, "Taichi GPU GUI requires wide lines support");
+  }
+
+  // Vulkan extensions.
+  uint32_t extension_count = 0;
+  vkEnumerateDeviceExtensionProperties(physical_device_, nullptr,
+                                        &extension_count, nullptr);
+  std::vector<VkExtensionProperties> extension_properties(extension_count);
+  vkEnumerateDeviceExtensionProperties(
+      physical_device_, nullptr, &extension_count, extension_properties.data());
+
+  // Physical device features.
+  VkPhysicalDeviceFeatures2 features_2{};
+  features_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+  VkPhysicalDeviceSubgroupProperties subgroup_properties{};
+  subgroup_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_PROPERTIES;
+  VkPhysicalDeviceVariablePointersFeaturesKHR variable_ptr_feature{};
+  variable_ptr_feature.sType =
+      VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VARIABLE_POINTERS_FEATURES_KHR;
+  VkPhysicalDeviceShaderAtomicFloatFeaturesEXT shader_atomic_float_feature{};
+  shader_atomic_float_feature.sType =
+      VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_FLOAT_FEATURES_EXT;
+  VkPhysicalDeviceShaderAtomicFloat2FeaturesEXT shader_atomic_float_2_feature{};
+  shader_atomic_float_2_feature.sType =
+      VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_FLOAT_2_FEATURES_EXT;
+  VkPhysicalDeviceFloat16Int8FeaturesKHR shader_f16_i8_feature{};
+  shader_f16_i8_feature.sType =
+      VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FLOAT16_INT8_FEATURES_KHR;
+  VkPhysicalDeviceBufferDeviceAddressFeaturesKHR
+      buffer_device_address_feature{};
+  buffer_device_address_feature.sType =
+      VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_KHR;
+
+  if (api_version_ >= VK_API_VERSION_1_1) {
+    features_2.pNext = std::exchange(subgroup_properties.pNext, &subgroup_properties);
+  }
+  if (api_version_ >= VK_API_VERSION_1_1)
+
+  if (api_version_ >= VK_API_VERSION_1_1) {
+    vkGetPhysicalDeviceFeatures2(physical_device_, &features_2);
+  } else if (ti_device_->get_cap(DeviceCapability::vk_has_physical_features2)) {
+    vkGetPhysicalDeviceFeatures2KHR(physical_device_, &features_2);
+  } else {
+    vkGetPhysicalDeviceFeatures(physical_device_, &features_2.features);
+  }
+
+  std::set<std::string_view> extensions;
+
+  for (VkExtensionProperties& ext : extension_properties) {
+    TI_TRACE("Vulkan device extension {} ({})", ext.extensionName,
+             ext.specVersion);
+
+    std::string_view ext_name(ext.extensionName);
+    if (ext_name == "VK_KHR_portability_subset") {
+      TI_WARN(
+          "Potential non-conformant Vulkan implementation, enabling "
+          "VK_KHR_portability_subset");
+    } else if (ext_name == VK_KHR_SWAPCHAIN_EXTENSION_NAME) {
+      ti_device_->set_cap(DeviceCapability::vk_has_presentation, true);
+    } else if (ext_name == VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME) {
+      ti_device_->set_cap(DeviceCapability::spirv_has_atomic_float);
+    } else if (ext_name == VK_EXT_SHADER_ATOMIC_FLOAT_2_EXTENSION_NAME) {
+      ti_device_->set_cap(DeviceCapability::spirv_has_atomic);
+    } else if (ext_name == VK_EXT)
+  }
+
+    
+
+}
+
 void VulkanDeviceCreator::create_logical_device(bool manual_create) {
   std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
   std::unordered_set<uint32_t> unique_families;
@@ -428,6 +556,10 @@ void VulkanDeviceCreator::create_logical_device(bool manual_create) {
   create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
   create_info.pQueueCreateInfos = queue_create_infos.data();
   create_info.queueCreateInfoCount = queue_create_infos.size();
+
+  setup_capabilities();
+
+  /*
 
   // Get device properties
   VkPhysicalDeviceProperties physical_device_properties{};
@@ -491,13 +623,12 @@ void VulkanDeviceCreator::create_logical_device(bool manual_create) {
     } else if (name == VK_KHR_SWAPCHAIN_EXTENSION_NAME) {
       has_swapchain = true;
       enabled_extensions.push_back(ext.extensionName);
+  */
     } else if (name == VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME) {
       enabled_extensions.push_back(ext.extensionName);
     } else if (name == VK_EXT_SHADER_ATOMIC_FLOAT_2_EXTENSION_NAME) {
       enabled_extensions.push_back(ext.extensionName);
     } else if (name == VK_KHR_SHADER_ATOMIC_INT64_EXTENSION_NAME) {
-      enabled_extensions.push_back(ext.extensionName);
-    } else if (name == VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME) {
       enabled_extensions.push_back(ext.extensionName);
     } else if (name == VK_KHR_SPIRV_1_4_EXTENSION_NAME) {
       if (ti_device_->get_cap(DeviceCapability::spirv_version) < 0x10400) {

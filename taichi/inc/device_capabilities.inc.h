@@ -1,0 +1,31 @@
+// Vulkan Caps
+PER_DEVICE_CAPABILITY(vk_api_version)
+PER_DEVICE_CAPABILITY(vk_has_physical_features2)
+PER_DEVICE_CAPABILITY(vk_has_external_memory)
+PER_DEVICE_CAPABILITY(vk_has_surface)
+PER_DEVICE_CAPABILITY(vk_has_presentation)
+// SPIR-V Caps
+PER_DEVICE_CAPABILITY(spirv_version)
+PER_DEVICE_CAPABILITY(spirv_has_int8)
+PER_DEVICE_CAPABILITY(spirv_has_int16)
+PER_DEVICE_CAPABILITY(spirv_has_int64)
+PER_DEVICE_CAPABILITY(spirv_has_float16)
+PER_DEVICE_CAPABILITY(spirv_has_float64)
+PER_DEVICE_CAPABILITY(spirv_has_atomic_i64)
+PER_DEVICE_CAPABILITY(spirv_has_atomic_float16)  // load, store, exchange
+PER_DEVICE_CAPABILITY(spirv_has_atomic_float16_add)
+PER_DEVICE_CAPABILITY(spirv_has_atomic_float16_minmax)
+PER_DEVICE_CAPABILITY(spirv_has_atomic_float)  // load, store, exchange
+PER_DEVICE_CAPABILITY(spirv_has_atomic_float_add)
+PER_DEVICE_CAPABILITY(spirv_has_atomic_float_minmax)
+PER_DEVICE_CAPABILITY(spirv_has_atomic_float64)  // load, store, exchange
+PER_DEVICE_CAPABILITY(spirv_has_atomic_float64_add)
+PER_DEVICE_CAPABILITY(spirv_has_atomic_float64_minmax)
+PER_DEVICE_CAPABILITY(spirv_has_variable_ptr)
+PER_DEVICE_CAPABILITY(spirv_has_physical_storage_buffer)
+PER_DEVICE_CAPABILITY(spirv_has_subgroup_basic)
+PER_DEVICE_CAPABILITY(spirv_has_subgroup_vote)
+PER_DEVICE_CAPABILITY(spirv_has_subgroup_arithmetic)
+PER_DEVICE_CAPABILITY(spirv_has_subgroup_ballot)
+// Graphics Caps
+PER_DEVICE_CAPABILITY(wide_lines)
