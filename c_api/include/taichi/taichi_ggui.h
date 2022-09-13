@@ -24,6 +24,8 @@ typedef struct TiWindowCreateInfoExt {
   uint32_t width;
   uint32_t height;
   TiOrientationExt orientation;
+  TiBool vsync;
+  TiBool show;
 } TiWindowCreateInfoExt;
 
 // structure.window_state
@@ -73,7 +75,8 @@ typedef struct TiSceneObjectExt {
 
 // function.create_window
 TI_DLL_EXPORT TiWindowExt TI_API_CALL
-ti_create_window_ext(TiRuntime runtime, TiWindowCreateInfoExt create_info);
+ti_create_window_ext(TiRuntime runtime,
+                     const TiWindowCreateInfoExt *create_info);
 
 // function.destroy_window
 TI_DLL_EXPORT void TI_API_CALL ti_destroy_window_ext(TiWindowExt window);

@@ -1337,6 +1337,14 @@
                         },
                         {
                             "type": "enumeration.orientation"
+                        },
+                        {
+                            "name": "vsync",
+                            "type": "alias.bool"
+                        },
+                        {
+                            "name": "show",
+                            "type": "alias.bool"
                         }
                     ]
                 },
@@ -1472,7 +1480,8 @@
                         },
                         {
                             "name": "create_info",
-                            "type": "structure.window_create_info"
+                            "type": "structure.window_create_info",
+                            "by_ref": true
                         }
                     ]
                 },
