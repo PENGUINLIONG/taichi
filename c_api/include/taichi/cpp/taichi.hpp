@@ -105,6 +105,13 @@ class Memory {
     return *this;
   }
 
+  inline void *map() {
+    return ti_map_memory(runtime_, memory_);
+  }
+  inline void unmap() {
+    return ti_unmap_memory(runtime_, memory_);
+  }
+
   constexpr TiMemory memory() const {
     return memory_;
   }
@@ -115,32 +122,28 @@ class Memory {
 
 template <typename T>
 class NdArray {
-  TiRuntime runtime_{TI_NULL_HANDLE};
+  Memory memory_{TI_NULL_HANDLE};
   TiNdArray ndarray_{};
   bool should_destroy_{false};
 
  public:
   constexpr bool is_valid() const {
-    return ndarray_.memory != nullptr;
+    return memory_.is_valid();
   }
   inline void destroy() {
-    if (should_destroy_) {
-      ti_free_memory(runtime_, ndarray_.memory);
-      ndarray_.memory = TI_NULL_HANDLE;
-      should_destroy_ = false;
-    }
+    memory_.destroy();
+    ndarray_ = {};
   }
 
   NdArray() {
   }
   NdArray(const NdArray<T> &) = delete;
   NdArray(NdArray<T> &&b)
-      : runtime_(detail::move_handle(b.runtime_)),
-        ndarray_(std::exchange(b.ndarray_, {})),
-        should_destroy_(std::exchange(b.should_destroy_, false)) {
+      : memory_(std::move(b.memory_)),
+        ndarray_(std::exchange(b.ndarray_, {})) {
   }
-  NdArray(TiRuntime runtime, const TiNdArray &ndarray, bool should_destroy)
-      : runtime_(runtime), ndarray_(ndarray), should_destroy_(should_destroy) {
+  NdArray(Memory &&memory, const TiNdArray &ndarray)
+      : memory_(memory), ndarray_(ndarray) {
   }
   ~NdArray() {
     destroy();
@@ -149,21 +152,20 @@ class NdArray {
   NdArray<T> &operator=(const NdArray<T> &) = delete;
   NdArray<T> &operator=(NdArray<T> &&b) {
     destroy();
-    runtime_ = detail::move_handle(b.runtime_);
+    memory_ = detail::move_handle(b.memory_);
     ndarray_ = std::exchange(b.ndarray_, {});
-    should_destroy_ = std::exchange(b.should_destroy_, false);
     return *this;
   }
 
   inline void *map() {
-    return ti_map_memory(runtime_, ndarray_.memory);
+    return memory_.map();
   }
   inline void unmap() {
-    return ti_unmap_memory(runtime_, ndarray_.memory);
+    return memory_.unmap();
   }
 
-  inline void read(T *dst, size_t size) {
-    T *src = (T *)map();
+  inline void read(void *dst, size_t size) {
+    void *src = (void *)map();
     if (src != nullptr) {
       std::memcpy(dst, src, size);
     }
@@ -172,8 +174,8 @@ class NdArray {
   inline void read(std::vector<T> &dst) {
     read(dst.data(), dst.size() * sizeof(T));
   }
-  inline void write(const T *src, size_t size) {
-    T *dst = (T *)map();
+  inline void write(const void *src, size_t size) {
+    void *dst = (void *)map();
     if (dst != nullptr) {
       std::memcpy(dst, src, size);
     }
@@ -184,7 +186,7 @@ class NdArray {
   }
 
   constexpr TiMemory memory() const {
-    return ndarray_.memory;
+    return memory_.memory();
   }
   constexpr TiNdArray ndarray() const {
     return ndarray_;
@@ -264,6 +266,7 @@ class Texture {
   }
   inline void destroy() {
     image_.destroy();
+    texture_ = {};
   }
 
   Texture() {
@@ -290,6 +293,9 @@ class Texture {
     return *this;
   }
 
+  constexpr TiImage image() const {
+    return image_.image();
+  }
   constexpr TiTexture texture() const {
     return texture_;
   }
