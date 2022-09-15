@@ -48,37 +48,44 @@
                 {
                     "name": "aot_module",
                     "type": "handle",
-                    "is_dispatchable": true
+                    "is_dispatchable": true,
+                    "dependency": "handle.runtime"
                 },
                 {
                     "name": "event",
                     "type": "handle",
-                    "is_dispatchable": true
+                    "is_dispatchable": false,
+                    "dependency": "handle.runtime"
                 },
                 {
                     "name": "memory",
                     "type": "handle",
-                    "is_dispatchable": false
+                    "is_dispatchable": false,
+                    "dependency": "handle.runtime"
                 },
                 {
                     "name": "image",
                     "type": "handle",
-                    "is_dispatchable": false
+                    "is_dispatchable": false,
+                    "dependency": "handle.runtime"
                 },
                 {
                     "name": "sampler",
                     "type": "handle",
-                    "is_dispatchable": false
+                    "is_dispatchable": false,
+                    "dependency": "handle.runtime"
                 },
                 {
                     "name": "kernel",
                     "type": "handle",
-                    "is_dispatchable": false
+                    "is_dispatchable": false,
+                    "dependency": "handle.aot_module"
                 },
                 {
                     "name": "compute_graph",
                     "type": "handle",
-                    "is_dispatchable": false
+                    "is_dispatchable": false,
+                    "dependency": "handle.aot_module"
                 },
                 {
                     "name": "error",
@@ -1150,7 +1157,7 @@
                     "name": "native_buffer",
                     "vendor": "unity",
                     "type": "handle",
-                    "is_dispatchable": false
+                    "is_ptr": true
                 },
                 {
                     "name": "import_native_runtime",

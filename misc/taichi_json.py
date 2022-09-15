@@ -143,7 +143,17 @@ class Definition(EntryBase):
 class Handle(EntryBase):
     def __init__(self, j):
         super().__init__(j, "handle")
-        self.is_dispatchable = j["is_dispatchable"]
+        assert "is_dispatchable" in j or "is_ptr" in j
+        self.is_dispatchable = False
+        self.is_ptr = False
+        self.dependency = None
+
+        if "is_dispatchable" in j:
+            self.is_dispatchable = j["is_dispatchable"]
+        if "is_ptr" in j:
+            self.is_ptr = j["is_ptr"]
+        if "dependency" in j:
+            self.dependency = j["dependency"]
 
 
 class Enumeration(EntryBase):
@@ -214,8 +224,9 @@ class Function(EntryBase):
 class Module:
     all_modules = {}
 
-    def __init__(self, j, builtin_tys):
+    def __init__(self, j, builtin_tys, suppress_failures=False):
         self.name = j["name"]
+        self.suppress_failures = suppress_failures
         self.is_built_in = False
         self.declr_reg = DeclarationRegistry(builtin_tys)
         self.required_modules = []
@@ -258,12 +269,13 @@ class Module:
                     else:
                         print(f"ignored unrecognized type declaration '{k}'")
                 except:
-                    print("failed to generate declaration for:", k)
+                    if not self.suppress_failures:
+                        print("failed to generate declaration for:", k)
 
         DeclarationRegistry.set_current(None)
 
     @staticmethod
-    def load_all(builtin_tys):
+    def load_all(builtin_tys, suppress_failures=False):
         j = None
         with open("c_api/taichi.json") as f:
             j = json.load(f)
@@ -272,7 +284,7 @@ class Module:
         print("taichi c-api version is:", version)
 
         for k in j["modules"]:
-            module = Module(k, builtin_tys)
+            module = Module(k, builtin_tys, suppress_failures)
             Module.all_modules[module.name] = module
 
         return list(Module.all_modules.values())
