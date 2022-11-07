@@ -10,97 +10,6 @@
 namespace taichi::lang {
 namespace gfx {
 
-namespace {
-class AotDataConverter {
- public:
-  static aot::ModuleData convert(const TaichiAotData &in) {
-    AotDataConverter c{};
-    return c.visit(in);
-  }
-
- private:
-  explicit AotDataConverter() = default;
-
-  aot::ModuleData visit(const TaichiAotData &in) const {
-    aot::ModuleData res{};
-    for (const auto &ker : in.kernels) {
-      auto val = visit(ker);
-      res.kernels[ker.name] = val;
-    }
-    res.fields = in.fields;
-    res.required_caps = in.required_caps;
-    res.root_buffer_size = in.root_buffer_size;
-    return res;
-  }
-
-  aot::CompiledTaichiKernel visit(
-      const spirv::TaichiKernelAttributes &in) const {
-    aot::CompiledTaichiKernel res{};
-    res.tasks.reserve(in.tasks_attribs.size());
-    for (const auto &t : in.tasks_attribs) {
-      res.tasks.push_back(visit(t));
-    }
-    res.args_count = in.ctx_attribs.args().size();
-    res.rets_count = in.ctx_attribs.rets().size();
-    res.args_buffer_size = in.ctx_attribs.args_bytes();
-    res.rets_buffer_size = in.ctx_attribs.rets_bytes();
-    for (const auto &arg : in.ctx_attribs.args()) {
-      if (!arg.is_array) {
-        aot::ScalarArg scalar_arg{};
-        scalar_arg.dtype_name = PrimitiveType::get(arg.dtype).to_string();
-        scalar_arg.offset_in_args_buf = arg.offset_in_mem;
-        res.scalar_args[arg.index] = scalar_arg;
-      } else {
-        aot::ArrayArg arr_arg{};
-        arr_arg.dtype_name = PrimitiveType::get(arg.dtype).to_string();
-        arr_arg.field_dim = arg.field_dim;
-        arr_arg.element_shape = arg.element_shape;
-        arr_arg.shape_offset_in_args_buf = arg.index * sizeof(int32_t);
-        res.arr_args[arg.index] = arr_arg;
-      }
-    }
-    return res;
-  }
-
-  aot::CompiledOffloadedTask visit(const TaskAttributes &in) const {
-    aot::CompiledOffloadedTask res{};
-    res.type = offloaded_task_type_name(in.task_type);
-    res.name = in.name;
-    if (in.range_for_attribs && in.range_for_attribs->const_begin &&
-        in.range_for_attribs->const_end) {
-      res.range_hint = std::to_string(in.range_for_attribs->end -
-                                      in.range_for_attribs->begin);
-    }
-    res.gpu_block_size = in.advisory_num_threads_per_group;
-    for (auto &buffer_bind : in.buffer_binds) {
-      if (buffer_bind.buffer.type == BufferType::Root) {
-        res.buffer_binds.push_back(
-            {{aot::BufferType::Root, buffer_bind.buffer.root_id},
-             buffer_bind.binding});
-      } else if (buffer_bind.buffer.type == BufferType::Rets) {
-        res.buffer_binds.push_back(
-            {{aot::BufferType::Rets, buffer_bind.buffer.root_id},
-             buffer_bind.binding});
-      } else if (buffer_bind.buffer.type == BufferType::GlobalTmps) {
-        res.buffer_binds.push_back(
-            {{aot::BufferType::GlobalTmps, buffer_bind.buffer.root_id},
-             buffer_bind.binding});
-      } else if (buffer_bind.buffer.type == BufferType::Args) {
-        res.buffer_binds.push_back(
-            {{aot::BufferType::Args, buffer_bind.buffer.root_id},
-             buffer_bind.binding});
-      }
-    }
-
-    for (auto &texture_bind : in.texture_binds) {
-      res.texture_binds.push_back(
-          {texture_bind.arg_id, texture_bind.binding, texture_bind.is_storage});
-    }
-    return res;
-  }
-};
-
-}  // namespace
 AotModuleBuilderImpl::AotModuleBuilderImpl(
     const std::vector<CompiledSNodeStructs> &compiled_structs,
     Arch device_api_backend,
@@ -127,32 +36,50 @@ std::string AotModuleBuilderImpl::write_spv_file(
   return spv_path;
 }
 
-void AotModuleBuilderImpl::dump(const std::string &output_dir,
-                                const std::string &filename) const {
-  TI_WARN_IF(!filename.empty(),
-             "Filename prefix is ignored on Unified Device API backends.");
+void AotModuleBuilderImpl::dump_kernels(const std::string &output_dir) const {
   const std::string bin_path = fmt::format("{}/metadata.tcb", output_dir);
   write_to_binary_file(ti_aot_data_, bin_path);
 
-  auto converted = AotDataConverter::convert(ti_aot_data_);
-  const auto &spirv_codes = ti_aot_data_.spirv_codes;
-  for (int i = 0; i < std::min(ti_aot_data_.kernels.size(), spirv_codes.size());
-       ++i) {
-    auto &k = ti_aot_data_.kernels[i];
-    for (int j = 0; j < std::min(k.tasks_attribs.size(), spirv_codes[i].size());
-         ++j) {
-      if (!spirv_codes[i][j].empty()) {
-        std::string spv_path =
-            write_spv_file(output_dir, k.tasks_attribs[j], spirv_codes[i][j]);
-        converted.kernels[k.name].tasks[j].source_path = spv_path;
-      }
+  std::string json = liong::json::print(liong::json::serialize(ti_aot_data_));
+  std::fstream f(output_dir + "/metadata.json", std::ios::trunc | std::ios::out);
+  f.write(json.data(), json.size());
+
+
+
+
+
+  std::vector<aot::CompiledArtifact> artifacts {};
+  for (size_t i = 0; i < ti_aot_data_.kernels; ++i) {
+    const spirv::TaichiKernelAttributes& kernel_attr = ti_aot_data_.kernels.at(i);
+    const std::vector<std::vector<uint32_t>> spirv_codes = ti_aot_data_.spirv_codes.at(i);
+
+    for (size_t j = 0; j < kernel_attr.tasks_attribs; ++j) {
+      const spirv::TaskAttributes& task_attr = kernel_attr.tasks_attribs.at(j);
+      const std::vector<uint32_t>& spirv_code = spirv_codes.at(j);
+
+      aot::CompiledArtifact artifact {};
+      artifact.name = kernel_attr.name;
+      artifact.path = kernel_attr.name + ".spv";
+      artifact.data = std::vector<uint8_t>(
+          (const uint8_t*)spirv_code.data(),
+          (const uint8_t*)(spirv_code.data() + spirv_code.size()));
+      artifacts.emplace_back(artifacts);
     }
   }
 
-  const std::string json_path = fmt::format("{}/metadata.json", output_dir);
-  converted.dump_json(json_path);
+  struct GfxModuleExtra {
+    uint root_buffer_size;
+  } extra;
+  extra.root_buffer_size = ti_aot_data_.root_buffer_size;
 
-  dump_graph(output_dir);
+
+  aot::ModuleData2 mod {};
+  mod.required_caps = caps_;
+  mod.extra = liong::json::serialize(extra);
+  mod.artifacts = std::move(artifacts);
+
+  aot::FilesystemAssetManager asset_mgr(output_dir);
+  asset_mgr.save_module(mod);
 }
 
 void AotModuleBuilderImpl::mangle_aot_data() {

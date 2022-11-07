@@ -87,11 +87,11 @@ std::string write_dxil_container(const std::string &output_dir,
   return path;
 }
 
-void AotModuleBuilderImpl::dump(const std::string &output_dir,
-                                const std::string &filename) const {
-  TI_WARN_IF(!filename.empty(),
-             "Filename prefix is ignored on Unified Device API backends.");
-  const std::string bin_path = fmt::format("{}/metadata_dx12.tcb", output_dir);
+void AotModuleBuilderImpl::dump_kernels(const std::string &output_dir) const {
+  std::fstream(output_dir + "/metadata.json", std::ios::trunc | std::ios::out);
+  std::string json = liong::json::print(liong::json::serialize(module_data));
+
+  const std::string bin_path = fmt::format("{}/metadata.tcb", output_dir);
   write_to_binary_file(module_data, bin_path);
   // Copy module_data to update task.source_path.
   auto tmp_module_data = module_data;
@@ -104,18 +104,9 @@ void AotModuleBuilderImpl::dump(const std::string &output_dir,
     for (int i = 0; i < tasks.size(); ++i) {
       auto &dxil_code = dxil_codes[i];
       auto &task = tasks[i];
-      std::string dxil_path =
-          write_dxil_container(output_dir, task.name, dxil_code);
-      task.source_path = dxil_path;
+      write_dxil_container(output_dir, task.name, dxil_code);
     }
   }
-
-  const std::string json_path =
-      fmt::format("{}/metadata_dx12.json", output_dir);
-  tmp_module_data.dump_json(json_path);
-
-  // FIXME: dump graph to different file.
-  // dump_graph(output_dir);
 }
 
 }  // namespace directx12

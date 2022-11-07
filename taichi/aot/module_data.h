@@ -56,8 +56,6 @@ struct CompiledOffloadedTask {
   std::string type;
   std::string range_hint;
   std::string name;
-  // Do we need to inline the source code?
-  std::string source_path;
   int gpu_block_size{0};
 
   std::vector<BufferBind> buffer_binds;
@@ -66,7 +64,6 @@ struct CompiledOffloadedTask {
   TI_IO_DEF(type,
             range_hint,
             name,
-            source_path,
             gpu_block_size,
             buffer_binds,
             texture_binds);
@@ -124,13 +121,30 @@ struct ModuleData {
 
   size_t root_buffer_size;
 
-  void dump_json(std::string path) {
-    TextSerializer ts;
-    ts.serialize_to_json("aot_data", *this);
-    ts.write_to_file(path);
-  }
-
   TI_IO_DEF(kernels, kernel_tmpls, fields, required_caps, root_buffer_size);
+};
+
+
+
+
+
+
+
+
+struct CompiledArtifact {
+  std::string name;
+  std::string path;
+  std::vector<uint8_t> data;
+
+  TI_IO_DEF(name, path);
+};
+
+struct ModuleData2 {
+  DeviceCapabilityConfig required_caps;
+  std::vector<CompiledArtifact> artifacts;
+  liong::json::JsonValue extra; // Backend specific data.
+
+  TI_IO_DEF(required_caps, artifacts, extra);
 };
 
 }  // namespace aot

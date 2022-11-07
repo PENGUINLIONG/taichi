@@ -102,6 +102,19 @@ struct JsonSerde {
     x = (T)(typename std::underlying_type<T>::type)j;
   }
 
+  // `JsonValue` as-is.
+  template <typename U = typename std::remove_cv<T>::type>
+  static JsonValue serialize(
+      const typename std::enable_if_t<std::is_same<U, liong::json::JsonValue>::value, T>& x) {
+    return x;
+  }
+  template <typename U = typename std::remove_cv<T>::type>
+  static void deserialize(
+      const JsonValue &j,
+      typename std::enable_if_t<std::is_same<U, liong::json::JsonValue>::value, T> &x) {
+    x = j;
+  }
+
   // String type.
   template <typename U = typename std::remove_cv<T>::type>
   static JsonValue serialize(
@@ -356,7 +369,10 @@ struct JsonSerdeFieldImpl<TFirst, TOthers...> {
                                  std::vector<std::string>::const_iterator name,
                                  TFirst &first,
                                  TOthers &...others) {
-    JsonSerde<TFirst>::deserialize(obj.inner.at(*name), first);
+    auto it = obj.inner.find(*name);
+    if (it != obj.inner.end()) {
+      JsonSerde<TFirst>::deserialize(it->second, first);
+    }
     JsonSerdeFieldImpl<TOthers...>::deserialize(obj, ++name, others...);
   }
 };

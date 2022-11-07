@@ -219,7 +219,7 @@ class Module:
                 "Specifying filename is no-op and will be removed in release v1.4.0",
                 DeprecationWarning)
         filepath = str(PurePosixPath(Path(filepath)))
-        self._aot_builder.dump(filepath, "")
+        self._aot_builder.dump(filepath)
 
     def archive(self, filepath: str):
         """

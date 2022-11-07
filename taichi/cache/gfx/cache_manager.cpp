@@ -14,9 +14,8 @@ namespace taichi::lang {
 namespace {
 
 constexpr char kMetadataFileLockName[] = "metadata.lock";
-constexpr char kAotMetadataFilename[] = "metadata.tcb";
-constexpr char kDebuggingAotMetadataFilename[] = "metadata.json";
-constexpr char kGraphMetadataFilename[] = "graphs.tcb";
+constexpr char kAotMetadataFilename[] = "metadata.json";
+constexpr char kGraphMetadataFilename[] = "graphs.json";
 constexpr char kOfflineCacheMetadataFilename[] = "offline_cache_metadata.tcb";
 using CompiledKernelData = gfx::GfxRuntime::RegisterParams;
 
@@ -50,20 +49,13 @@ struct CacheCleanerUtils<gfx::CacheManager::Metadata> {
   static bool save_metadata(const CacheCleanerConfig &config,
                             const MetadataType &data) {
     // Update AOT metadata
-    gfx::TaichiAotData old_aot_data, new_aot_data;
     auto aot_metadata_path =
         taichi::join_path(config.path, kAotMetadataFilename);
-    if (read_from_binary_file(old_aot_data, aot_metadata_path)) {
-      const auto &kernels = data.kernels;
-      for (auto &k : old_aot_data.kernels) {
-        if (kernels.count(k.name)) {
-          new_aot_data.kernels.push_back(std::move(k));
-        }
-      }
-      write_to_binary_file(new_aot_data, aot_metadata_path);
-    }
-    write_to_binary_file(
-        data, taichi::join_path(config.path, config.metadata_filename));
+
+    std::fstream f(aot_metadata_path, std::ios::trunc | std::ios::out);
+    std::string json = liong::json::print(liong::json::serialize(data));
+    f.write(json.data(), json.size());
+
     return true;
   }
 
@@ -87,8 +79,6 @@ struct CacheCleanerUtils<gfx::CacheManager::Metadata> {
   // To remove other files except cache files and offline cache metadta files
   static void remove_other_files(const CacheCleanerConfig &config) {
     taichi::remove(taichi::join_path(config.path, kAotMetadataFilename));
-    taichi::remove(
-        taichi::join_path(config.path, kDebuggingAotMetadataFilename));
     taichi::remove(taichi::join_path(config.path, kGraphMetadataFilename));
   }
 
@@ -178,7 +168,7 @@ void CacheManager::dump_with_merging() const {
 
       // Update metadata.{tcb,json}
       cache_builder->merge_with_old_meta_data(path_);
-      cache_builder->dump(path_, "");
+      cache_builder->dump(path_);
 
       // Update offline_cache_metadata.tcb
       using offline_cache::load_metadata_with_checking;

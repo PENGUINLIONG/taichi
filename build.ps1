@@ -99,7 +99,7 @@ switch ($BuildType) {
 }
 
 # Prepare LLVM.
-if ($env:LLVM_DIR) {
+if ((-not $LlvmDir) -and $env:LLVM_DIR) {
     # Compatible with previous building process, where `LLVM_DIR` and
     # `LLVM_AS_EXECUTABLE` are set externally.
     $LlvmDir = $env:LLVM_DIR;

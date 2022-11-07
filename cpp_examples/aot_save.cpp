@@ -73,6 +73,6 @@ void aot_save(taichi::Arch arch) {
   aot_builder->add_field("place", place, true, place->dt, {n}, 1, 1);
   aot_builder->add("init", kernel_init.get());
   aot_builder->add("ret", kernel_ret.get());
-  aot_builder->dump(".", taichi::arch_name(arch) + "_aot.tcb");
+  aot_builder->dump(".");
   std::cout << "done" << std::endl;
 }

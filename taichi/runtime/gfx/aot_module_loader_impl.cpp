@@ -26,11 +26,17 @@ class AotModuleImpl : public aot::Module {
       : module_path_(params.module_path),
         runtime_(params.runtime),
         device_api_backend_(device_api_backend) {
-    const std::string bin_path =
-        fmt::format("{}/metadata.tcb", params.module_path);
-    if (!read_from_binary_file(ti_aot_data_, bin_path)) {
-      mark_corrupted();
-      return;
+
+    {
+      std::fstream f(params.module_path + "/metadata.json", std::ios::in | std::ios::ate);
+      if (!f.is_open()) {
+        mark_corrupted();
+        return;
+      }
+      std::string json(f.tellg(), '\0');
+      f.seekg(std::ios::beg);
+      f.read(json.data(), json.size());
+      liong::json::deserialize(liong::json::parse(json), ti_aot_data_);
     }
 
     if (!params.enable_lazy_loading) {
@@ -50,11 +56,16 @@ class AotModuleImpl : public aot::Module {
       }
     }
 
-    const std::string graph_path =
-        fmt::format("{}/graphs.tcb", params.module_path);
-    if (!read_from_binary_file(graphs_, graph_path)) {
-      mark_corrupted();
-      return;
+    {
+      std::fstream f(params.module_path + "/graphs.json", std::ios::in | std::ios::ate);
+      if (!f.is_open()) {
+        mark_corrupted();
+        return;
+      }
+      std::string json(f.tellg(), '\0');
+      f.seekg(std::ios::beg);
+      f.read(json.data(), json.size());
+      liong::json::deserialize(liong::json::parse(json), graphs_);
     }
   }
 

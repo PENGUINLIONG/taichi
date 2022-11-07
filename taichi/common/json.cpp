@@ -80,6 +80,7 @@ struct Tokenizer {
     std::stringstream ss;
     while (pos != end) {
       char c = *pos;
+      if (c == '\0') { break; }
 
       // Ignore whitespaces.
       if (c == ' ' || c == '\t' || c == '\r' || c == '\n') {

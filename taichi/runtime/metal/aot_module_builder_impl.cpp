@@ -19,35 +19,24 @@ AotModuleBuilderImpl::AotModuleBuilderImpl(
   ti_aot_data_.metadata = buffer_meta_data;
 }
 
-void AotModuleBuilderImpl::write_metal_file(const std::string &dir,
-                                            const std::string &filename,
-                                            const CompiledKernelData &k) const {
-  const std::string mtl_path =
-      fmt::format("{}/{}_{}.metal", dir, filename, k.kernel_name);
-  std::ofstream fs{mtl_path};
-  fs << k.source_code;
-  fs.close();
-}
-
-void AotModuleBuilderImpl::dump(const std::string &output_dir,
-                                const std::string &filename) const {
-  const std::string bin_path =
-      fmt::format("{}/{}_metadata.tcb", output_dir, filename);
-  write_to_binary_file(ti_aot_data_, bin_path);
-  // The txt file is mostly for debugging purpose.
-  const std::string txt_path =
-      fmt::format("{}/{}_metadata.txt", output_dir, filename);
-  TextSerializer ts;
-  ts("taichi aot data", ti_aot_data_);
-  ts.write_to_file(txt_path);
-
-  for (const auto &k : ti_aot_data_.kernels) {
-    write_metal_file(output_dir, filename, k);
+void AotModuleBuilderImpl::dump_kernels(const std::string &output_dir) const {
+  {
+    std::string path = output_dir + "/metadata.json";
+    std::fstream f(path, std::ios::trunc | std::ios::out);
+    f << liong::json::print(liong::json::serialize(ti_aot_data_));
   }
 
-  for (const auto &k : ti_aot_data_.tmpl_kernels) {
-    for (auto &ki : k.kernel_tmpl_map) {
-      write_metal_file(output_dir, filename, ki.second);
+  for (const auto &kernel : ti_aot_data_.kernels) {
+    std::string path = fmt::format("{}/{}.metal", output_dir, kernel.kernel_name);
+    std::fstream f(path, std::ios::trunc | std::ios::out);
+    f << kernel.source_code;
+  }
+
+  for (const auto &tmpl_kernel : ti_aot_data_.tmpl_kernels) {
+    for (auto &kernel : tmpl_kernel.kernel_tmpl_map) {
+      std::string path = fmt::format("{}/{}.metal", output_dir, kernel.second.kernel_name);
+      std::fstream f(path, std::ios::trunc | std::ios::out);
+      f << kernel.second.source_code;
     }
   }
 }
