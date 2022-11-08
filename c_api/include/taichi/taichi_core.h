@@ -315,13 +315,19 @@ typedef struct TiKernel_t *TiKernel;
 // target in a predefined order.
 typedef struct TiComputeGraph_t *TiComputeGraph;
 
+// Enumeration `TiWarning`
+typedef enum TiWarning {
+  TI_WARNING_SUCCESS = 0,
+  TI_WARNING_TRUNCATED = 1,
+  TI_WARNING_TIMEOUT = 2,
+  TI_WARNING_MAX_ENUM = 0xffffffff,
+} TiWarning;
+
 // Enumeration `TiError`
 //
 // Errors reported by the Taichi C-API. Enumerants greater than or equal to zero
 // are success states.
 typedef enum TiError {
-  // The output data is truncated because the user-provided buffer is too small.
-  TI_ERROR_TRUNCATED = 1,
   // The Taichi C-API invocation finished gracefully.
   TI_ERROR_SUCCESS = 0,
   // The invoked API, or the combination of parameters is not supported by the
@@ -378,6 +384,41 @@ typedef enum TiArch {
   TI_ARCH_VULKAN = 12,
   TI_ARCH_MAX_ENUM = 0xffffffff,
 } TiArch;
+
+// Enumeration `TiCapability`
+typedef enum TiCapability {
+  TI_CAPABILITY_SPIRV_VERSION = 0,
+  TI_CAPABILITY_SPIRV_HAS_INT8 = 1,
+  TI_CAPABILITY_SPIRV_HAS_INT16 = 2,
+  TI_CAPABILITY_SPIRV_HAS_INT64 = 3,
+  TI_CAPABILITY_SPIRV_HAS_FLOAT16 = 4,
+  TI_CAPABILITY_SPIRV_HAS_FLOAT64 = 5,
+  TI_CAPABILITY_SPIRV_HAS_ATOMIC_I64 = 6,
+  TI_CAPABILITY_SPIRV_HAS_ATOMIC_FLOAT16 = 7,
+  TI_CAPABILITY_SPIRV_HAS_ATOMIC_FLOAT16_ADD = 8,
+  TI_CAPABILITY_SPIRV_HAS_ATOMIC_FLOAT16_MINMAX = 9,
+  TI_CAPABILITY_SPIRV_HAS_ATOMIC_FLOAT = 10,
+  TI_CAPABILITY_SPIRV_HAS_ATOMIC_FLOAT_ADD = 11,
+  TI_CAPABILITY_SPIRV_HAS_ATOMIC_FLOAT_MINMAX = 12,
+  TI_CAPABILITY_SPIRV_HAS_ATOMIC_FLOAT64 = 13,
+  TI_CAPABILITY_SPIRV_HAS_ATOMIC_FLOAT64_ADD = 14,
+  TI_CAPABILITY_SPIRV_HAS_ATOMIC_FLOAT64_MINMAX = 15,
+  TI_CAPABILITY_SPIRV_HAS_VARIABLE_PTR = 16,
+  TI_CAPABILITY_SPIRV_HAS_PHYSICAL_STORAGE_BUFFER = 17,
+  TI_CAPABILITY_SPIRV_HAS_SUBGROUP_BASIC = 18,
+  TI_CAPABILITY_SPIRV_HAS_SUBGROUP_VOTE = 19,
+  TI_CAPABILITY_SPIRV_HAS_SUBGROUP_ARITHMETIC = 20,
+  TI_CAPABILITY_SPIRV_HAS_SUBGROUP_BALLOT = 21,
+  TI_CAPABILITY_SPIRV_HAS_NON_SEMANTIC_INFO = 22,
+  TI_CAPABILITY_SPIRV_HAS_NO_INTEGER_WRAP_DECORATION = 23,
+  TI_CAPABILITY_MAX_ENUM = 0xffffffff,
+} TiCapability;
+
+// Structure `TiCapabilityLevelInfo`
+typedef struct TiCapabilityLevelInfo {
+  TiCapability capability;
+  uint32_t level;
+} TiCapabilityLevelInfo;
 
 // Enumeration `TiDataType`
 //

@@ -83,10 +83,18 @@
                     "is_dispatchable": false
                 },
                 {
+                    "name": "warning",
+                    "type": "enumeration",
+                    "cases": {
+                        "success": 0,
+                        "truncated": 1,
+                        "timeout": 2
+                    }
+                },
+                {
                     "name": "error",
                     "type": "enumeration",
                     "cases": {
-                        "truncated": 1,
                         "success": 0,
                         "not_supported": -1,
                         "corrupted_data": -2,
@@ -515,6 +523,31 @@
                     ]
                 },
                 {
+                    "name": "get_runtime_capabilities",
+                    "type": "function",
+                    "is_extension": true,
+                    "parameters": [
+                        {
+                            "name": "@return",
+                            "type": "enumeration.warning"
+                        },
+                        {
+                            "type": "handle.runtime"
+                        },
+                        {
+                            "name": "capability_count",
+                            "type": "uint32_t",
+                            "by_mut": true
+                        },
+                        {
+                            "name": "capabilities",
+                            "type": "enumeration.capability_level_info",
+                            "count": "capability_count",
+                            "by_mut": true
+                        }
+                    ]
+                },
+                {
                     "name": "set_runtime_capabilities",
                     "type": "function",
                     "is_extension": true,
@@ -528,7 +561,7 @@
                         },
                         {
                             "name": "capabilities",
-                            "type": "enumeration.capability",
+                            "type": "enumeration.capability_level_info",
                             "count": "capability_count"
                         }
                     ]

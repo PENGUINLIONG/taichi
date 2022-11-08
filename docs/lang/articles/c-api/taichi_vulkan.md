@@ -40,24 +40,6 @@ Necessary detail to share the same Vulkan runtime between Taichi and external pr
 **NOTE** `compute_queue` and `graphics_queue` can be the same if the queue family have `VK_QUEUE_COMPUTE_BIT` and `VK_QUEUE_GRAPHICS_BIT` set at the same tiem.
 
 ---
-### Structure `TiVulkanMemoryInteropInfo`
-
-```c
-// structure.vulkan_memory_interop_info
-typedef struct TiVulkanMemoryInteropInfo {
-  VkBuffer buffer;
-  uint64_t size;
-  VkBufferUsageFlags usage;
-} TiVulkanMemoryInteropInfo;
-```
-
-Necessary detail to share the same piece of Vulkan buffer between Taichi and external procedures.
-
-- `buffer`: Vulkan buffer.
-- `size`: Size of the piece of memory in bytes.
-- `usage`: Vulkan buffer usage. In most of the cases, Taichi requires the `VK_BUFFER_USAGE_STORAGE_BUFFER_BIT`.
-
----
 ### Structure `TiVulkanImageInteropInfo`
 
 ```c
@@ -141,33 +123,6 @@ TI_DLL_EXPORT void TI_API_CALL ti_export_vulkan_runtime(
 ```
 
 Exports a Vulkan runtime from external procedures to Taichi.
-
----
-### Function `ti_import_vulkan_memory`
-
-```c
-// function.import_vulkan_memory
-TI_DLL_EXPORT TiMemory TI_API_CALL ti_import_vulkan_memory(
-  TiRuntime runtime,
-  const TiVulkanMemoryInteropInfo* interop_info
-);
-```
-
-Imports the Vulkan buffer owned by Taichi to external procedures.
-
----
-### Function `ti_export_vulkan_memory`
-
-```c
-// function.export_vulkan_memory
-TI_DLL_EXPORT void TI_API_CALL ti_export_vulkan_memory(
-  TiRuntime runtime,
-  TiMemory memory,
-  TiVulkanMemoryInteropInfo* interop_info
-);
-```
-
-Exports a Vulkan buffer from external procedures to Taichi.
 
 ---
 ### Function `ti_import_vulkan_image`
