@@ -25,10 +25,6 @@ void check_dx_error(HRESULT hr, const char *msg) {
   }
 }
 
-std::unique_ptr<ResourceBinder::Bindings> Dx11ResourceBinder::materialize() {
-  TI_NOT_IMPLEMENTED;
-}
-
 void Dx11ResourceBinder::rw_buffer(uint32_t set,
                                    uint32_t binding,
                                    DevicePtr ptr,
@@ -106,8 +102,34 @@ void Dx11CommandList::bind_pipeline(Pipeline *p) {
   d3d11_deferred_context_->CSSetShader(pipeline->get_program(), nullptr, 0);
 }
 
-void Dx11CommandList::bind_resources(ResourceBinder *binder_) {
-  Dx11ResourceBinder *binder = static_cast<Dx11ResourceBinder *>(binder_);
+void Dx11CommandList::bind_resources(const ResourceBinder &binder) {
+
+  for (size_t i = 0; i < binder.bindings.size(); ++i) {
+    const ResourceBinding& binding = binder.bindings.at(i);
+
+    switch (binding.type) {
+    case ResourceType::uniform_buffer: {
+      const auto& v = binding.uniform_buffer;
+      auto cb_buffer =
+          device_->alloc_id_to_cb_buffer(d3d11_deferred_context_, v.buffer.alloc_id);
+
+      d3d11_deferred_context_->CSSetConstantBuffers(binding, 1, &cb_buffer);
+
+      cb_slot_watermark_ = std::max(cb_slot_watermark_, int(binding));
+      break;
+    }
+    case ResourceType::storage_buffer: {
+      const auto& v = binding.storage_buffer;
+
+      ID3D11UnorderedAccessView *uav =
+          device_->alloc_id_to_uav(d3d11_deferred_context_, v.buffer.alloc_id);
+      d3d11_deferred_context_->CSSetUnorderedAccessViews(binding, 1, &uav,
+                                                        nullptr);
+      break;
+    }
+    default: TI_ERROR("unsupported resource type");
+    }
+  }
 
   // UAV
   for (auto &[binding, alloc_id] : binder->uav_binding_to_alloc_id()) {
@@ -126,11 +148,6 @@ void Dx11CommandList::bind_resources(ResourceBinder *binder_) {
 
     cb_slot_watermark_ = std::max(cb_slot_watermark_, int(binding));
   }
-}
-
-void Dx11CommandList::bind_resources(ResourceBinder *binder,
-                                     ResourceBinder::Bindings *bindings) {
-  TI_NOT_IMPLEMENTED;
 }
 
 void Dx11CommandList::buffer_barrier(DevicePtr ptr, size_t size) {
@@ -939,10 +956,6 @@ Dx11Pipeline::Dx11Pipeline(const PipelineSourceDesc &desc,
 }
 
 Dx11Pipeline::~Dx11Pipeline() {
-}
-
-ResourceBinder *Dx11Pipeline::resource_binder() {
-  return &binder_;
 }
 
 }  // namespace directx11

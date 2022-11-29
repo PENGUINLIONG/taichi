@@ -1,7 +1,5 @@
 #pragma once
 #include "taichi/rhi/vulkan/vulkan_api.h"
-// FIXME: (penguinliong) Remove this.
-#include "taichi/rhi/vulkan/vulkan_resource_binder.h"
 
 namespace taichi::lang {
 namespace vulkan {
@@ -42,9 +40,7 @@ class VulkanCommandList : public CommandList {
   ~VulkanCommandList() override;
 
   void bind_pipeline(Pipeline *p) override;
-  void bind_resources(ResourceBinder *binder) override;
-  void bind_resources(ResourceBinder *binder,
-                      ResourceBinder::Bindings *bindings) override;
+  void bind_resources(const ResourceBinder &binder) override;
   void buffer_barrier(DevicePtr ptr, size_t size) override;
   void buffer_barrier(DeviceAllocation alloc) override;
   void memory_barrier() override;

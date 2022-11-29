@@ -94,6 +94,10 @@ DeviceObjVkQueryPool::~DeviceObjVkQueryPool() {
   vkDestroyQueryPool(device, query_pool, nullptr);
 }
 
+DeviceObjVkSampler::~DeviceObjVkSampler() {
+  vkDestroySampler(device, sampler, nullptr);
+}
+
 IDeviceObj create_device_obj(VkDevice device) {
   IDeviceObj obj = std::make_shared<DeviceObj>();
   obj->device = device;
@@ -609,6 +613,18 @@ IVkQueryPool create_query_pool(VkDevice device) {
   IVkQueryPool obj = std::make_shared<DeviceObjVkQueryPool>();
   obj->device = device;
   obj->query_pool = query_pool;
+
+  return obj;
+}
+
+IVkSampler create_sampler(VkDevice device, const VkSamplerCreateInfo& info) {
+  VkSampler sampler = VK_NULL_HANDLE;
+  VkResult res = vkCreateSampler(device, &info, nullptr, &sampler);
+  BAIL_ON_VK_BAD_RESULT(res, "failed to create sampler");
+
+  IVkSampler obj = std::make_shared<DeviceObjVkSampler>();
+  obj->device = device;
+  obj->sampler = sampler;
 
   return obj;
 }

@@ -78,11 +78,6 @@ class PipelineImpl : public Pipeline {
       : pipeline_state_(std::move(pipeline)) {
   }
 
-  ResourceBinder *resource_binder() override {
-    // TODO: Hmm, why do we need this interface?
-    return nullptr;
-  }
-
   MTLComputePipelineState *mtl_pipeline_state() {
     return pipeline_state_.get();
   }
@@ -117,15 +112,11 @@ class CommandListImpl : public CommandList {
         static_cast<PipelineImpl *>(p)->mtl_pipeline_state();
   }
 
-  void bind_resources(ResourceBinder *binder) override {
+  void bind_resources(const ResourceBinder &binder) override {
     get_or_make_compute_builder()->binding_map =
         static_cast<ResourceBinderImpl *>(binder)->binding_map();
   }
 
-  void bind_resources(ResourceBinder *binder,
-                      ResourceBinder::Bindings *bindings) override {
-    TI_NOT_IMPLEMENTED;
-  }
   void buffer_barrier(DevicePtr ptr, size_t size) override {
     TI_NOT_IMPLEMENTED;
   }

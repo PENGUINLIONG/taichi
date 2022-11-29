@@ -174,78 +174,6 @@ std::string get_opengl_error_string(GLenum err) {
 #undef PER_GL_ERR
 }
 
-void check_opengl_error(const std::string &msg) {
-  auto err = glGetError();
-  if (err != GL_NO_ERROR) {
-    auto estr = get_opengl_error_string(err);
-    TI_ERROR("{}: {}", msg, estr);
-  }
-}
-
-GLResourceBinder::~GLResourceBinder() {
-}
-
-void GLResourceBinder::rw_buffer(uint32_t set,
-                                 uint32_t binding,
-                                 DevicePtr ptr,
-                                 size_t size) {
-  // FIXME: Implement ranged bind
-  TI_NOT_IMPLEMENTED;
-}
-
-void GLResourceBinder::rw_buffer(uint32_t set,
-                                 uint32_t binding,
-                                 DeviceAllocation alloc) {
-  TI_ASSERT_INFO(set == 0, "OpenGL only supports set = 0, requested set = {}",
-                 set);
-  ssbo_binding_map_[binding] = alloc.alloc_id;
-}
-
-void GLResourceBinder::buffer(uint32_t set,
-                              uint32_t binding,
-                              DevicePtr ptr,
-                              size_t size) {
-  // FIXME: Implement ranged bind
-  TI_NOT_IMPLEMENTED;
-}
-
-void GLResourceBinder::buffer(uint32_t set,
-                              uint32_t binding,
-                              DeviceAllocation alloc) {
-  TI_ASSERT_INFO(set == 0, "OpenGL only supports set = 0, requested set = {}",
-                 set);
-  ubo_binding_map_[binding] = alloc.alloc_id;
-}
-
-void GLResourceBinder::image(uint32_t set,
-                             uint32_t binding,
-                             DeviceAllocation alloc,
-                             ImageSamplerConfig sampler_config) {
-  TI_ASSERT_INFO(set == 0, "OpenGL only supports set = 0, requested set = {}",
-                 set);
-  texture_binding_map_[binding] = alloc.alloc_id;
-}
-
-void GLResourceBinder::rw_image(uint32_t set,
-                                uint32_t binding,
-                                DeviceAllocation alloc,
-                                int lod) {
-  TI_NOT_IMPLEMENTED;
-}
-
-void GLResourceBinder::vertex_buffer(DevicePtr ptr, uint32_t binding) {
-  TI_NOT_IMPLEMENTED;
-}
-
-void GLResourceBinder::index_buffer(DevicePtr ptr, size_t index_width) {
-  TI_NOT_IMPLEMENTED;
-}
-
-std::unique_ptr<ResourceBinder::Bindings> GLResourceBinder::materialize() {
-  TI_NOT_IMPLEMENTED;
-  return nullptr;
-}
-
 GLPipeline::GLPipeline(const PipelineSourceDesc &desc,
                        const std::string &name) {
   GLuint shader_id;
@@ -327,10 +255,6 @@ GLPipeline::~GLPipeline() {
   check_opengl_error("glDeleteShader");
 }
 
-ResourceBinder *GLPipeline::resource_binder() {
-  return &binder_;
-}
-
 GLCommandList::~GLCommandList() {
 }
 
@@ -341,33 +265,43 @@ void GLCommandList::bind_pipeline(Pipeline *p) {
   recorded_commands_.push_back(std::move(cmd));
 }
 
-void GLCommandList::bind_resources(ResourceBinder *_binder) {
-  GLResourceBinder *binder = static_cast<GLResourceBinder *>(_binder);
-  for (auto &[binding, buffer] : binder->ssbo_binding_map()) {
-    auto cmd = std::make_unique<CmdBindBufferToIndex>();
-    cmd->buffer = buffer;
-    cmd->index = binding;
-    recorded_commands_.push_back(std::move(cmd));
-  }
-  for (auto &[binding, buffer] : binder->ubo_binding_map()) {
-    auto cmd = std::make_unique<CmdBindBufferToIndex>();
-    cmd->buffer = buffer;
-    cmd->index = binding;
-    cmd->target = GL_UNIFORM_BUFFER;
-    recorded_commands_.push_back(std::move(cmd));
-  }
-  for (auto &[binding, texture] : binder->texture_binding_map()) {
-    auto cmd = std::make_unique<CmdBindTextureToIndex>();
-    cmd->texture = texture;
-    cmd->index = binding;
-    cmd->target = device_->get_image_gl_dims(texture);
-    recorded_commands_.push_back(std::move(cmd));
-  }
-}
+void GLCommandList::bind_resources(const ResourceBinder &binder) {
+  for (size_t i = 0; i < binder.bindings.size(); ++i) {
+    const ResourceBinding& binding = binder.bindings.at(i);
+    switch (binding.type) {
+    case ResourceType::uniform_buffer: {
+      const auto& v = binding.storage_buffer;
+      TI_ERROR_IF(v.set != 0, "opengl doesn't support descriptor sets");
 
-void GLCommandList::bind_resources(ResourceBinder *binder,
-                                   ResourceBinder::Bindings *bindings) {
-  TI_NOT_IMPLEMENTED;
+      auto cmd = std::make_unique<CmdBindBufferToIndex>();
+      cmd->buffer = v.buffer.alloc_id;
+      cmd->index = v.binding;
+      cmd->target = GL_SHADER_STORAGE_BUFFER;
+      recorded_commands_.emplace_back(std::move(cmd));
+      break;
+    }
+    case ResourceType::storage_buffer: {
+      const auto& v = binding.storage_buffer;
+      TI_ERROR_IF(v.set != 0, "opengl doesn't support descriptor sets");
+
+      auto cmd = std::make_unique<CmdBindBufferToIndex>();
+      cmd->buffer = v.buffer.alloc_id;
+      cmd->index = v.binding;
+      cmd->target = GL_UNIFORM_BUFFER;
+      recorded_commands_.emplace_back(std::move(cmd));
+      break;
+    }
+    case ResourceType::sampled_image: {
+      auto cmd = std::make_unique<CmdBindTextureToIndex>();
+      cmd->texture = texture;
+      cmd->index = binding;
+      cmd->target = device_->get_image_gl_dims(texture);
+      recorded_commands_.emplace_back(std::move(cmd));
+      break;
+    }
+    default: TI_ERROR("unsupported resource type");
+    }
+  }
 }
 
 template <typename T>

@@ -11,35 +11,10 @@
 namespace taichi::lang {
 namespace cpu {
 
-class CpuResourceBinder : public ResourceBinder {
- public:
-  ~CpuResourceBinder() override {
-  }
-
-  std::unique_ptr<Bindings> materialize() override{TI_NOT_IMPLEMENTED};
-
-  void rw_buffer(uint32_t set,
-                 uint32_t binding,
-                 DevicePtr ptr,
-                 size_t size) override{TI_NOT_IMPLEMENTED};
-  void rw_buffer(uint32_t set,
-                 uint32_t binding,
-                 DeviceAllocation alloc) override{TI_NOT_IMPLEMENTED};
-
-  void buffer(uint32_t set,
-              uint32_t binding,
-              DevicePtr ptr,
-              size_t size) override{TI_NOT_IMPLEMENTED};
-  void buffer(uint32_t set, uint32_t binding, DeviceAllocation alloc) override{
-      TI_NOT_IMPLEMENTED};
-};
-
 class CpuPipeline : public Pipeline {
  public:
   ~CpuPipeline() override {
   }
-
-  ResourceBinder *resource_binder() override{TI_NOT_IMPLEMENTED};
 };
 
 class CpuCommandList : public CommandList {
@@ -48,10 +23,7 @@ class CpuCommandList : public CommandList {
   }
 
   void bind_pipeline(Pipeline *p) override{TI_NOT_IMPLEMENTED};
-  void bind_resources(ResourceBinder *binder) override{TI_NOT_IMPLEMENTED};
-  void bind_resources(ResourceBinder *binder,
-                      ResourceBinder::Bindings *bindings) override{
-      TI_NOT_IMPLEMENTED};
+  void bind_resources(const ResourceBinder &binder) override{TI_NOT_IMPLEMENTED};
   void buffer_barrier(DevicePtr ptr, size_t size) override{TI_NOT_IMPLEMENTED};
   void buffer_barrier(DeviceAllocation alloc) override{TI_NOT_IMPLEMENTED};
   void memory_barrier() override{TI_NOT_IMPLEMENTED};

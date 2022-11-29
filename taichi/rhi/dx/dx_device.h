@@ -73,7 +73,6 @@ class Dx11Pipeline : public Pipeline {
                const std::string &name,
                Dx11Device *device);
   ~Dx11Pipeline() override;
-  ResourceBinder *resource_binder() override;
   ID3D11ComputeShader *get_program() {
     return compute_shader_;
   }
@@ -115,9 +114,7 @@ class Dx11CommandList : public CommandList {
   ~Dx11CommandList() override;
 
   void bind_pipeline(Pipeline *p) override;
-  void bind_resources(ResourceBinder *binder) override;
-  void bind_resources(ResourceBinder *binder,
-                      ResourceBinder::Bindings *bindings) override;
+  void bind_resources(const ResourceBinder &binder) override;
   void buffer_barrier(DevicePtr ptr, size_t size) override;
   void buffer_barrier(DeviceAllocation alloc) override;
   void memory_barrier() override;

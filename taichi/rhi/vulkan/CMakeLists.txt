@@ -10,7 +10,6 @@ target_sources(${VULKAN_RHI}
     vulkan_semaphore.cpp
     vulkan_event.cpp
     vulkan_pipeline.cpp
-    vulkan_resource_binder.cpp
     vulkan_command_list.cpp
     vulkan_surface.cpp
     vulkan_stream.cpp

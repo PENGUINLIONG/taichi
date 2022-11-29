@@ -305,4 +305,13 @@ struct DeviceObjVkQueryPool : public DeviceObj {
 using IVkQueryPool = std::shared_ptr<DeviceObjVkQueryPool>;
 IVkQueryPool create_query_pool(VkDevice device);
 
+// VkSampler
+struct DeviceObjVkSampler : public DeviceObj {
+  VkSampler sampler{VK_NULL_HANDLE};
+  ~DeviceObjVkSampler() override;
+};
+using IVkSampler = std::shared_ptr<DeviceObjVkSampler>;
+IVkSampler create_sampler(VkDevice device);
+
+
 }  // namespace vkapi

@@ -74,63 +74,131 @@ void VulkanCommandList::bind_pipeline(Pipeline *p) {
   current_pipeline_ = pipeline;
 }
 
-void VulkanCommandList::bind_resources(ResourceBinder *ti_binder) {
-  VulkanResourceBinder *binder = static_cast<VulkanResourceBinder *>(ti_binder);
-
-  for (auto &pair : binder->get_sets()) {
-    VkPipelineLayout pipeline_layout =
-        current_pipeline_->pipeline_layout()->layout;
-
-    vkapi::IVkDescriptorSetLayout layout =
-        ti_device_->get_desc_set_layout(pair.second);
-
-    vkapi::IVkDescriptorSet set = nullptr;
-
-    if (currently_used_sets_.find(pair.second) != currently_used_sets_.end()) {
-      set = currently_used_sets_.at(pair.second);
-    }
-
-    if (!set) {
-      set = ti_device_->alloc_desc_set(layout);
-      binder->write_to_set(pair.first, *ti_device_, set);
-      currently_used_sets_[pair.second] = set;
-    }
-
-    VkPipelineBindPoint bind_point;
-    if (current_pipeline_->is_graphics()) {
-      bind_point = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    } else {
-      bind_point = VK_PIPELINE_BIND_POINT_COMPUTE;
-    }
-
-    vkCmdBindDescriptorSets(buffer_->buffer, bind_point, pipeline_layout,
-                            /*firstSet=*/0,
-                            /*descriptorSetCount=*/1, &set->set,
-                            /*dynamicOffsetCount=*/0,
-                            /*pDynamicOffsets=*/nullptr);
-    buffer_->refs.push_back(set);
+void VulkanCommandList::bind_resources(const ResourceBinder &binder) {
+  // Allocate descriptor sets.
+  uint32_t set_count = current_pipeline_->set_count();
+  std::vector<vkapi::IVkDescriptorSet> sets(set_count);
+  for (uint32_t i = 0; i < set_count; ++i) {
+    vkapi::IVkDescriptorSetLayout set_layout = current_pipeline_->set_layout(i);
+    vkapi::IVkDescriptorSet set = ti_device_->alloc_desc_set(set_layout);
+    sets.emplace_back(std::move(set));
   }
 
-  if (current_pipeline_->is_graphics()) {
-    auto [idx_ptr, type] = binder->get_index_buffer();
-    if (idx_ptr.device) {
-      auto index_buffer = ti_device_->get_vkbuffer(idx_ptr);
-      vkCmdBindIndexBuffer(buffer_->buffer, index_buffer->buffer,
-                           idx_ptr.offset, type);
-      buffer_->refs.push_back(index_buffer);
-    }
+  // Collect descriptor resources.
+  std::vector<VkDescriptorBufferInfo> buffer_infos;
+  std::vector<VkDescriptorImageInfo> image_infos;
+  buffer_infos.reserve(binder.bindings.size());
+  image_infos.reserve(binder.bindings.size());
+  std::vector<VkWriteDescriptorSet> desc_writes(set_count);
 
-    for (auto [binding, ptr] : binder->get_vertex_buffers()) {
-      auto buffer = ti_device_->get_vkbuffer(ptr);
-      vkCmdBindVertexBuffers(buffer_->buffer, binding, 1, &buffer->buffer,
-                             &ptr.offset);
-      buffer_->refs.push_back(buffer);
+  for (size_t i = 0; i < binder.bindings.size(); ++i) {
+    const ResourceBinding& binding = binder.bindings.at(i);
+
+    switch (binding.type) {
+      case ResourceType::uniform_buffer: {
+        const auto& v = binding.uniform_buffer;
+        vkapi::IVkBuffer buffer = ti_device_->get_vkbuffer(v.buffer);
+
+        VkDescriptorBufferInfo& buffer_info = buffer_infos.emplace_back();
+        buffer_info.buffer = buffer->buffer;
+        buffer_info.offset = 0;
+        buffer_info.range = VK_WHOLE_SIZE;
+
+        VkWriteDescriptorSet& desc_write = desc_writes.emplace_back();
+        desc_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        desc_write.dstSet = sets.at(v.set)->set;
+        desc_write.dstBinding = v.binding;
+        desc_write.descriptorCount = 1;
+        desc_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        desc_write.pBufferInfo = &buffer_info;
+        break;
+      }
+      case ResourceType::storage_buffer: {
+        const auto& v = binding.storage_buffer;
+        vkapi::IVkBuffer buffer = ti_device_->get_vkbuffer(v.buffer);
+
+        VkDescriptorBufferInfo& buffer_info = buffer_infos.emplace_back();
+        buffer_info.buffer = buffer->buffer;
+        buffer_info.offset = 0;
+        buffer_info.range = VK_WHOLE_SIZE;
+
+        VkWriteDescriptorSet& desc_write = desc_writes.emplace_back();
+        desc_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        desc_write.dstSet = sets.at(v.set)->set;
+        desc_write.dstBinding = v.binding;
+        desc_write.descriptorCount = 1;
+        desc_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        desc_write.pBufferInfo = &buffer_info;
+        break;
+      }
+      case ResourceType::vertex_buffer: {
+        const auto& v = binding.vertex_buffer;
+        vkapi::IVkBuffer buffer = ti_device_->get_vkbuffer(v.buffer);
+
+        VkDeviceSize offset = 0;
+        vkCmdBindVertexBuffers(buffer_->buffer, v.binding, 1, &buffer->buffer, &offset);
+        break;
+      }
+      case ResourceType::index_buffer: {
+        const auto& v = binding.index_buffer;
+        vkapi::IVkBuffer buffer = ti_device_->get_vkbuffer(v.buffer);
+
+        VkIndexType index_type;
+        switch (v.index_type) {
+        case IndexType::u16:
+          index_type = VK_INDEX_TYPE_UINT16;
+          break;
+        case IndexType::u32:
+          index_type = VK_INDEX_TYPE_UINT32;
+          break;
+        default:
+          TI_ERROR("invalid index type");
+        }
+
+        vkCmdBindIndexBuffer(buffer_->buffer, buffer->buffer, 0, index_type);
+        break;
+      }
+      case ResourceType::sampled_image: {
+        const auto& v = binding.sampled_image;
+        vkapi::IVkImageView image = std::get<1>(ti_device_->get_vk_image(v.image));
+
+        VkDescriptorImageInfo& image_info = image_infos.emplace_back();
+        image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        image_info.imageView = image->view;
+        image_info.sampler = 0; // TODO:
+
+        VkWriteDescriptorSet desc_write {};
+        desc_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        desc_write.dstSet = sets.at(v.set)->set;
+        desc_write.dstBinding = v.binding;
+        desc_write.descriptorCount = 1;
+        desc_write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        desc_write.pImageInfo = &image_info;
+        break;
+      }
+      case ResourceType::storage_image: {
+        const auto& v = binding.storage_image;
+        vkapi::IVkImageView image = std::get<1>(ti_device_->get_vk_image(v.image));
+
+        VkDescriptorImageInfo& image_info = image_infos.emplace_back();
+        image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+        image_info.imageView = image->view;
+        image_info.sampler = ti_device_->get_default_sampler()->sampler;
+
+
+        VkWriteDescriptorSet desc_write {};
+        desc_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        desc_write.dstSet = sets.at(v.set)->set;
+        desc_write.dstBinding = v.binding;
+        desc_write.descriptorCount = 1;
+        desc_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        desc_write.pImageInfo = &image_info;
+        break;
+      }
+      default: TI_ERROR("unsupported resource type");
     }
   }
-}
-
-void VulkanCommandList::bind_resources(ResourceBinder *binder,
-                                       ResourceBinder::Bindings *bindings) {
+  vkUpdateDescriptorSets(device_, desc_writes.size(), desc_writes.data(), 0, nullptr);
 }
 
 void VulkanCommandList::buffer_barrier(DevicePtr ptr, size_t size) {

@@ -79,8 +79,6 @@ class GLPipeline : public Pipeline {
   GLPipeline(const PipelineSourceDesc &desc, const std::string &name);
   ~GLPipeline() override;
 
-  ResourceBinder *resource_binder() override;
-
   GLuint get_program() {
     return program_id_;
   }
@@ -97,9 +95,7 @@ class GLCommandList : public CommandList {
   ~GLCommandList() override;
 
   void bind_pipeline(Pipeline *p) override;
-  void bind_resources(ResourceBinder *binder) override;
-  void bind_resources(ResourceBinder *binder,
-                      ResourceBinder::Bindings *bindings) override;
+  void bind_resources(const ResourceBinder &binder) override;
   void buffer_barrier(DevicePtr ptr, size_t size) override;
   void buffer_barrier(DeviceAllocation alloc) override;
   void memory_barrier() override;

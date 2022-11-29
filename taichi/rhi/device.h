@@ -6,6 +6,8 @@
 #include "taichi/jit/jit_module.h"
 #include "taichi/program/compile_config.h"
 #include "taichi/rhi/device_capability.h"
+#include "taichi/rhi/resource_binder.h"
+#include "taichi/rhi/device_allocation.h"
 
 namespace taichi::lang {
 
@@ -38,110 +40,7 @@ enum class BlendFactor : uint32_t {
 };
 
 class Device;
-struct DeviceAllocation;
-struct DevicePtr;
 struct LLVMRuntime;
-
-// TODO: Figure out how to support images. Temporary solutions is to have all
-// opque types such as images work as an allocation
-using DeviceAllocationId = uint32_t;
-
-struct TI_DLL_EXPORT DeviceAllocation {
-  Device *device{nullptr};
-  DeviceAllocationId alloc_id{0};
-  // TODO: Shall we include size here?
-
-  DevicePtr get_ptr(uint64_t offset = 0) const;
-
-  bool operator==(const DeviceAllocation &other) const {
-    return other.device == device && other.alloc_id == alloc_id;
-  }
-
-  bool operator!=(const DeviceAllocation &other) const {
-    return !(*this == other);
-  }
-};
-
-struct TI_DLL_EXPORT DeviceAllocationGuard : public DeviceAllocation {
-  explicit DeviceAllocationGuard(DeviceAllocation alloc)
-      : DeviceAllocation(alloc) {
-  }
-  DeviceAllocationGuard(const DeviceAllocationGuard &) = delete;
-  ~DeviceAllocationGuard();
-};
-
-struct TI_DLL_EXPORT DevicePtr : public DeviceAllocation {
-  uint64_t offset{0};
-
-  bool operator==(const DevicePtr &other) const {
-    return other.device == device && other.alloc_id == alloc_id &&
-           other.offset == offset;
-  }
-
-  bool operator!=(const DevicePtr &other) const {
-    return !(*this == other);
-  }
-};
-
-constexpr DeviceAllocation kDeviceNullAllocation{};
-constexpr DevicePtr kDeviceNullPtr{};
-
-// TODO: fill this with the required options
-struct ImageSamplerConfig {};
-
-class ResourceBinder {
- public:
-  virtual ~ResourceBinder() {
-  }
-
-  struct Bindings {};
-
-  virtual std::unique_ptr<Bindings> materialize() = 0;
-
-  // In Vulkan this is called Storage Buffer (shader can store)
-  virtual void rw_buffer(uint32_t set,
-                         uint32_t binding,
-                         DevicePtr ptr,
-                         size_t size) = 0;
-  virtual void rw_buffer(uint32_t set,
-                         uint32_t binding,
-                         DeviceAllocation alloc) = 0;
-
-  // In Vulkan this is called Uniform Buffer (shader can only load)
-  virtual void buffer(uint32_t set,
-                      uint32_t binding,
-                      DevicePtr ptr,
-                      size_t size) = 0;
-  virtual void buffer(uint32_t set,
-                      uint32_t binding,
-                      DeviceAllocation alloc) = 0;
-
-  virtual void image(uint32_t set,
-                     uint32_t binding,
-                     DeviceAllocation alloc,
-                     ImageSamplerConfig sampler_config) {
-    TI_NOT_IMPLEMENTED
-  }
-
-  virtual void rw_image(uint32_t set,
-                        uint32_t binding,
-                        DeviceAllocation alloc,
-                        int lod) {
-    TI_NOT_IMPLEMENTED
-  }
-
-  // Set vertex buffer (not implemented in compute only device)
-  virtual void vertex_buffer(DevicePtr ptr, uint32_t binding = 0) {
-    TI_NOT_IMPLEMENTED
-  }
-
-  // Set index buffer (not implemented in compute only device)
-  // index_width = 4 -> uint32 index
-  // index_width = 2 -> uint16 index
-  virtual void index_buffer(DevicePtr ptr, size_t index_width) {
-    TI_NOT_IMPLEMENTED
-  }
-};
 
 enum class PipelineSourceType {
   spirv_binary,
@@ -189,7 +88,7 @@ class Pipeline {
   virtual ~Pipeline() {
   }
 
-  virtual ResourceBinder *resource_binder() = 0;
+  virtual uint32_t set_count() const = 0;
 };
 
 enum class ImageDimension {
@@ -241,9 +140,7 @@ class CommandList {
   }
 
   virtual void bind_pipeline(Pipeline *p) = 0;
-  virtual void bind_resources(ResourceBinder *binder) = 0;
-  virtual void bind_resources(ResourceBinder *binder,
-                              ResourceBinder::Bindings *bindings) = 0;
+  virtual void bind_resources(const ResourceBinder &binder) = 0;
   virtual void buffer_barrier(DevicePtr ptr, size_t size) = 0;
   virtual void buffer_barrier(DeviceAllocation alloc) = 0;
   virtual void memory_barrier() = 0;

@@ -14,7 +14,6 @@
 #include "taichi/rhi/vulkan/vulkan_device.h"
 #include "taichi/rhi/vulkan/vulkan_event.h"
 #include "taichi/rhi/vulkan/vulkan_stream.h"
-#include "taichi/rhi/vulkan/vulkan_resource_binder.h"
 #include "taichi/common/core.h"
 
 namespace taichi::lang {
@@ -39,6 +38,7 @@ void VulkanDevice::init_vulkan_structs(Params &params) {
   graphics_queue_ = params.graphics_queue;
   graphics_queue_family_index_ = params.graphics_queue_family_index;
 
+  default_sampler_ = create_sampler();
   create_vma_allocator();
   new_descriptor_pool();
 }
@@ -479,6 +479,25 @@ vkapi::IVkImageView VulkanDevice::get_vk_lod_imageview(
   return image_allocations_.at(alloc.alloc_id).view_lods[lod];
 }
 
+vkapi::IVkSampler VulkanDevice::create_sampler() {
+  // TODO: (penguinliong) Take parameters.
+  VkSamplerCreateInfo sampler_info{};
+  sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+  sampler_info.magFilter = VK_FILTER_LINEAR;
+  sampler_info.minFilter = VK_FILTER_LINEAR;
+  sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+  sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+  sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+  sampler_info.anisotropyEnable = VK_FALSE;
+  sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+  sampler_info.unnormalizedCoordinates = VK_FALSE;
+  sampler_info.compareEnable = VK_FALSE;
+  sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+  sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+
+  return vkapi::create_sampler(device_);
+}
+
 DeviceAllocation VulkanDevice::create_image(const ImageParams &params) {
   DeviceAllocation handle;
   handle.device = this;
@@ -709,31 +728,52 @@ vkapi::IVkRenderPass VulkanDevice::get_renderpass(
   return renderpass;
 }
 
-vkapi::IVkDescriptorSetLayout VulkanDevice::get_desc_set_layout(
-    VulkanResourceBinder::Set &set) {
-  if (desc_set_layouts_.find(set) == desc_set_layouts_.end()) {
-    std::vector<VkDescriptorSetLayoutBinding> bindings;
-    for (auto &pair : set.bindings) {
-      bindings.push_back(VkDescriptorSetLayoutBinding{
-          /*binding=*/pair.first, pair.second.type, /*descriptorCount=*/1,
-          VK_SHADER_STAGE_ALL,
-          /*pImmutableSamplers=*/nullptr});
+vkapi::IVkDescriptorSetLayout VulkanDevice::get_desc_set_layout(const ResourceLayout &set) {
+  auto it = desc_set_layouts_.find(set);
+  if (it != desc_set_layouts_.end()) {
+    return it->second;
+  }
+
+  std::vector<VkDescriptorSetLayoutBinding> bindings(set.binding_points.size());
+  for (size_t i = 0; i < set.binding_points.size(); ++i) {
+    const auto &binding_point = set.binding_points.at(i);
+    VkDescriptorType desc_type;
+    switch (binding_point.type) {
+    case ResourceType::uniform_buffer:
+      desc_type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+      break;
+    case ResourceType::storage_buffer:
+      desc_type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+      break;
+    case ResourceType::sampled_image:
+      desc_type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+      break;
+    case ResourceType::storage_image:
+      desc_type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+      break;
+    default:
+      // Not a descriptor resource type.
+      continue;
     }
 
-    VkDescriptorSetLayoutCreateInfo create_info{};
-    create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    create_info.pNext = nullptr;
-    create_info.flags = 0;
-    create_info.bindingCount = bindings.size();
-    create_info.pBindings = bindings.data();
-
-    auto layout = vkapi::create_descriptor_set_layout(device_, &create_info);
-    desc_set_layouts_[set] = layout;
-
-    return layout;
-  } else {
-    return desc_set_layouts_.at(set);
+    VkDescriptorSetLayoutBinding& binding = bindings.at(i);
+    binding.binding = binding_point.binding;
+    binding.descriptorCount = 1;
+    binding.stageFlags = VK_SHADER_STAGE_ALL;
+    binding.descriptorType = desc_type;
   }
+
+  VkDescriptorSetLayoutCreateInfo create_info{};
+  create_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+  create_info.pNext = nullptr;
+  create_info.flags = 0;
+  create_info.bindingCount = bindings.size();
+  create_info.pBindings = bindings.data();
+
+  auto layout = vkapi::create_descriptor_set_layout(device_, &create_info);
+  desc_set_layouts_[set] = layout;
+
+  return layout;
 }
 
 vkapi::IVkDescriptorSet VulkanDevice::alloc_desc_set(

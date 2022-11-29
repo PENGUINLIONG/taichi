@@ -117,24 +117,6 @@ void VulkanPipeline::create_descriptor_set_layout(const Params &params) {
       sets_used.insert(set);
     }
 
-    // Handle special vertex shaders stuff
-    // if (code_view.stage == VK_SHADER_STAGE_VERTEX_BIT) {
-    //   uint32_t attrib_count;
-    //   result =
-    //       spvReflectEnumerateInputVariables(&module, &attrib_count, nullptr);
-    //   TI_ASSERT(result == SPV_REFLECT_RESULT_SUCCESS);
-    //   std::vector<SpvReflectInterfaceVariable *> attribs(attrib_count);
-    //   result = spvReflectEnumerateInputVariables(&module, &attrib_count,
-    //                                               attribs.data());
-    //   TI_ASSERT(result == SPV_REFLECT_RESULT_SUCCESS);
-
-    //   for (SpvReflectInterfaceVariable *attrib : attribs) {
-    //     uint32_t location = attrib->location;
-    //     SpvReflectTypeDescription *type = attrib->type_description;
-    //     TI_WARN("attrib {}:{}", location, type->type_name);
-    //   }
-    // }
-
     if (code_view.stage == VK_SHADER_STAGE_FRAGMENT_BIT) {
       uint32_t render_target_count = 0;
       result = spvReflectEnumerateOutputVariables(&module, &render_target_count,
@@ -406,10 +388,6 @@ VulkanResourceBinder::~VulkanResourceBinder() {
       }
     }
   }
-}
-
-std::unique_ptr<ResourceBinder::Bindings> VulkanResourceBinder::materialize() {
-  return std::unique_ptr<Bindings>();
 }
 
 }  // namespace vulkan

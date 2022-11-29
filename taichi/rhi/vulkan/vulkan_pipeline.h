@@ -1,7 +1,5 @@
 #pragma once
 #include "taichi/rhi/vulkan/vulkan_api.h"
-// FIXME: (penguinliong) Remove this.
-#include "taichi/rhi/vulkan/vulkan_resource_binder.h"
 
 namespace taichi::lang {
 namespace vulkan {
@@ -36,12 +34,11 @@ class VulkanPipeline : public Pipeline {
       const std::vector<VertexInputAttribute> &vertex_attrs);
   ~VulkanPipeline() override;
 
-  ResourceBinder *resource_binder() override {
-    return &resource_binder_;
-  }
-
   vkapi::IVkPipelineLayout pipeline_layout() const {
     return pipeline_layout_;
+  }
+  vkapi::IVkDescriptorSetLayout set_layout(uint32_t set) const {
+    return set_layouts_.at(set);
   }
 
   vkapi::IVkPipeline pipeline() const {
@@ -101,11 +98,10 @@ class VulkanPipeline : public Pipeline {
   std::unordered_map<vkapi::IVkRenderPass, vkapi::IVkPipeline>
       graphics_pipeline_;
 
-  VulkanResourceBinder resource_binder_;
-  std::vector<vkapi::IVkDescriptorSetLayout> set_layouts_;
   std::vector<VkShaderModule> shader_modules_;
   vkapi::IVkPipeline pipeline_{VK_NULL_HANDLE};
   vkapi::IVkPipelineLayout pipeline_layout_{VK_NULL_HANDLE};
+  std::vector<vkapi::IVkDescriptorSetLayout> set_layouts_;
 };
 
 }  // namespace vulkan
