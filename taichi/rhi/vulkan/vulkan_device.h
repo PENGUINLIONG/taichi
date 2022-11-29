@@ -114,6 +114,12 @@ class TI_DLL_EXPORT VulkanDevice : public GraphicsDevice {
   DeviceAllocation create_image(const ImageParams &params) override;
   void destroy_image(DeviceAllocation handle) override;
 
+  // TODO: (penguinliong) Take parameters.
+  vkapi::IVkSampler create_sampler();
+  vkapi::IVkSampler get_default_sampler() const {
+    return default_sampler_;
+  }
+
   // Vulkan specific functions
   VkInstance vk_instance() const {
     return instance_;
@@ -166,8 +172,7 @@ class TI_DLL_EXPORT VulkanDevice : public GraphicsDevice {
 
   vkapi::IVkFramebuffer get_framebuffer(const VulkanFramebufferDesc &desc);
 
-  vkapi::IVkDescriptorSetLayout get_desc_set_layout(
-      VulkanResourceBinder::Set &set);
+  vkapi::IVkDescriptorSetLayout get_desc_set_layout(const ResourceLayout &set);
   vkapi::IVkDescriptorSet alloc_desc_set(vkapi::IVkDescriptorSetLayout layout);
 
   inline void set_current_caps(DeviceCapabilityConfig &&caps) {
@@ -232,6 +237,7 @@ class TI_DLL_EXPORT VulkanDevice : public GraphicsDevice {
   };
 
   unordered_map<uint32_t, ImageAllocInternal> image_allocations_;
+  vkapi::IVkSampler default_sampler_;
 
   // Renderpass
   unordered_map<VulkanRenderPassDesc,
@@ -244,9 +250,7 @@ class TI_DLL_EXPORT VulkanDevice : public GraphicsDevice {
       framebuffer_pools_;
 
   // Descriptors / Layouts / Pools
-  unordered_map<VulkanResourceBinder::Set,
-                vkapi::IVkDescriptorSetLayout,
-                VulkanResourceBinder::SetLayoutHasher>
+  std::map<ResourceLayout, vkapi::IVkDescriptorSetLayout>
       desc_set_layouts_;
   vkapi::IVkDescriptorPool desc_pool_{nullptr};
 };
