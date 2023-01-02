@@ -91,6 +91,14 @@ endif()
     endif()
 endif ()
 
+# (penguinliong) When building for iOS with Xcode `CMAKE_SYSTEM_PROCESSOR`
+# is empty
+if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "")
+    if ("arm64" STREQUAL CMAKE_OSX_ARCHITECTURES)
+        set(CMAKE_SYSTEM_PROCESSOR "arm64")
+    endif()
+endif()
+
 message("Building for processor ${CMAKE_SYSTEM_PROCESSOR}")
 if ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "x86_64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "AMD64" OR "${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "amd64")
     if (MSVC)

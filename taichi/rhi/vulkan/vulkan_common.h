@@ -10,10 +10,21 @@
 #define VK_USE_PLATFORM_ANDROID_KHR
 #endif
 
+#ifdef __APPLE__
+#ifdef VK_NO_PROTOTYPES
+static_assert(false, "");
+#endif  // VK_NO_PROTOTYPES
+
+#ifndef VK_USE_PLATFORM_METAL_EXT
+#define VK_USE_PLATFORM_METAL_EXT 1
+#endif // VK_USE_PLATFORM_METAL_EXT
+#else
 #include <volk.h>
+
 #ifndef VK_NO_PROTOTYPES
 #define VK_NO_PROTOTYPES 1
 #endif  // VK_NO_PROTOTYPES
+#endif // __APPLE__
 
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_core.h>

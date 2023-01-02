@@ -3,13 +3,6 @@
 
 #include "taichi/rhi/vulkan/vulkan_loader.h"
 
-#ifdef __APPLE__
-// For `runtime_lib_dir()`
-#include "taichi/util/lang_util.h"
-// For `glfwInitVulkanLoader`
-#include "GLFW/glfw3.h"
-#endif
-
 namespace taichi::lang {
 namespace vulkan {
 
@@ -17,10 +10,6 @@ VulkanLoader::VulkanLoader() {
 }
 
 bool VulkanLoader::check_vulkan_device() {
-#ifdef __APPLE__
-  glfwInitVulkanLoader(vkGetInstanceProcAddr);
-#endif
-
   bool found_device_with_compute = false;
 
   // We create an temporary Vulkan instance to probe the Vulkan devices.
@@ -95,24 +84,19 @@ bool VulkanLoader::init(PFN_vkGetInstanceProcAddr get_proc_addr) {
       return;
     }
     // (penguinliong) So that MoltenVK instances can be imported.
+#if defined(__APPLE__)
+    TI_ASSERT(get_proc_addr == nullptr || get_proc_addr == vkGetInstanceProcAddr);
+    initialized_ = true;
+#else
     if (get_proc_addr != nullptr) {
       volkInitializeCustom(get_proc_addr);
       initialized_ = true;
       return;
     }
-#if defined(__APPLE__)
-    vulkan_rt_ = std::make_unique<DynamicLoader>(runtime_lib_dir() +
-                                                 "/libMoltenVK.dylib");
-    PFN_vkGetInstanceProcAddr get_proc_addr =
-        (PFN_vkGetInstanceProcAddr)vulkan_rt_->load_function(
-            "vkGetInstanceProcAddr");
 
-    volkInitializeCustom(get_proc_addr);
-    initialized_ = true;
-#else
     VkResult result = volkInitialize();
     initialized_ = result == VK_SUCCESS;
-#endif
+#endif // defined(__APPLE__)
     initialized_ = initialized_ && check_vulkan_device();
     const char *id = std::getenv("TI_VISIBLE_DEVICE");
     if (id) {
@@ -124,11 +108,15 @@ bool VulkanLoader::init(PFN_vkGetInstanceProcAddr get_proc_addr) {
 
 void VulkanLoader::load_instance(VkInstance instance) {
   vulkan_instance_ = instance;
+#if !defined(__APPLE__)
   volkLoadInstance(instance);
+#endif // !defined(__APPLE__)
 }
 void VulkanLoader::load_device(VkDevice device) {
   vulkan_device_ = device;
+#if !defined(__APPLE__)
   volkLoadDevice(device);
+#endif // !defined(__APPLE__)
 }
 
 PFN_vkVoidFunction VulkanLoader::load_function(const char *name) {

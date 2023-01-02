@@ -6,7 +6,7 @@
 
 #ifdef ANDROID
 #include <android/native_window_jni.h>
-#else
+#elif !defined(__APPLE__) || defined(TARGET_OS_OSX)
 #include <GLFW/glfw3.h>
 #endif
 
@@ -474,11 +474,7 @@ class VulkanSurface : public Surface {
   VkSurfaceKHR surface_;
   VkSwapchainKHR swapchain_;
   vkapi::IVkSemaphore image_available_;
-#ifdef ANDROID
-  ANativeWindow *window_;
-#else
-  GLFWwindow *window_;
-#endif
+  void *window_;
   BufferFormat image_format_;
 
   uint32_t image_index_{0};

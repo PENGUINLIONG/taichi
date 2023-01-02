@@ -19,3 +19,7 @@
 #ifdef TI_WITH_CPU
 #include "taichi/taichi_cpu.h"
 #endif  // TI_WITH_CPU
+
+#ifdef TI_WITH_METAL
+#include "taichi/taichi_metal.h"
+#endif  // TI_WITH_METAL

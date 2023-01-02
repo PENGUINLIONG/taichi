@@ -8,11 +8,20 @@
 // Taichi runtime is not necessarily using the same 3rd-party headers as the
 // user codes. For C-API implementations we only use the internal headers.
 #ifdef TI_WITH_VULKAN
-#ifndef VK_NO_PROTOTYPES
-#define VK_NO_PROTOTYPES 1
-#endif  // VK_NO_PROTOTYPES
-#include "vulkan/vulkan.h"
-#define TI_NO_VULKAN_INCLUDES 1
+  #ifdef TI_WITH_METAL
+    #ifndef VK_USE_PLATFORM_METAL_EXT
+      #define VK_USE_PLATFORM_METAL_EXT 1
+    #endif  // VK_USE_PLATFORM_METAL_EXT
+  #endif  // TI_WITH_METAL
+
+
+  #ifndef TI_WITH_METAL
+    #ifndef VK_NO_PROTOTYPES
+      #define VK_NO_PROTOTYPES 1
+    #endif  // VK_NO_PROTOTYPES
+  #endif // TI_WITH_METAL
+  #include "vulkan/vulkan.h"
+  #define TI_NO_VULKAN_INCLUDES 1
 #endif  // TI_WITH_VULKAN
 
 #ifdef TI_WITH_OPENGL

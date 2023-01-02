@@ -101,6 +101,10 @@ void VulkanProgramImpl::materialize_runtime(MemoryPool *memory_pool,
 #ifndef ANDROID
   GLFWwindow *glfw_window = nullptr;
 
+#ifdef __APPLE__
+    glfwInitVulkanLoader(vkGetInstanceProcAddr);
+#endif
+
   if (glfwInit()) {
     glfwSetErrorCallback(glfw_error_callback);
 

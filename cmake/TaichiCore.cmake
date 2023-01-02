@@ -1,4 +1,4 @@
-option(USE_STDCPP "Use -stdlib=libc++" OFF)
+option(USE_STDCPP "Use -stdlib=libc++" ON)
 option(TI_WITH_LLVM "Build with LLVM backends" ON)
 option(TI_WITH_METAL "Build with the Metal backend" ON)
 option(TI_WITH_CUDA "Build with the CUDA backend" ON)
@@ -320,22 +320,11 @@ endif()
 # Vulkan Device API
 if (TI_WITH_VULKAN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DTI_WITH_VULKAN")
-    if (APPLE)
-        # The latest Molten-vk v1.2.0 and v1.1.11 breaks GGUI: mpm3d_ggui.py
-        # So we have to manually download and install Molten-vk v1.10.0
-        #
-        # Uncomment the following lines if the mpm3d_ggui.py runs well with the latest Molten-vk
-        #find_library(MOLTEN_VK libMoltenVK.dylib PATHS $HOMEBREW_CELLAR/molten-vk $VULKAN_SDK REQUIRED)
-        #configure_file(${MOLTEN_VK} ${CMAKE_BINARY_DIR}/libMoltenVK.dylib COPYONLY)
-        #message(STATUS "MoltenVK library ${MOLTEN_VK}")
-
-        if(NOT EXISTS ${CMAKE_BINARY_DIR}/libMoltenVK.dylib)
-            execute_process(COMMAND curl -L -o ${CMAKE_BINARY_DIR}/libMoltenVK.zip https://github.com/taichi-dev/taichi_assets/files/9977436/libMoltenVK.dylib.zip)
-            execute_process(COMMAND tar -xf ${CMAKE_BINARY_DIR}/libMoltenVK.zip --directory ${CMAKE_BINARY_DIR})
-        endif()
-        install(FILES ${CMAKE_BINARY_DIR}/libMoltenVK.dylib DESTINATION ${INSTALL_LIB_DIR}/runtime)
-    endif()
     add_subdirectory(taichi/rhi/vulkan)
+    if (APPLE)
+        target_link_libraries(vulkan_rhi PUBLIC /Users/penguinliong/Library/Developer/Xcode/DerivedData/MoltenVK-gzvhtkjichuwfkckzndbkobvsjbr/Build/Products/Release/libMoltenVK.a)
+        target_include_directories(vulkan_rhi PUBLIC /opt/homebrew/Cellar/molten-vk/1.2.1/include)
+    endif()
     add_subdirectory(taichi/runtime/program_impls/vulkan)
 
     # TODO: this dependency is here because program.cpp includes vulkan_program.h
@@ -348,19 +337,17 @@ endif ()
 
 # Optional dependencies
 if (APPLE)
-  find_library(COCOA Cocoa)
-  if (NOT COCOA)
-    message(FATAL_ERROR "Cocoa not found")
-  endif()
-  find_library(METAL Metal)
-  if (NOT METAL)
-    message(FATAL_ERROR "Metal not found")
-  endif()
-  target_link_libraries(${CORE_LIBRARY_NAME}
-    PRIVATE
-      ${COCOA}
-      ${METAL}
-    )
+    set(APPLE_FRAMEWORKS "")
+
+    if (NOT CMAKE_SYSTEM_NAME STREQUAL "iOS")
+        find_library(Cocoa NAMES Cocoa REQUIRED)
+        list(APPEND APPLE_FRAMEWORKS ${Cocoa})
+    endif()
+
+    find_library(Metal NAMES Metal REQUIRED)
+    list(APPEND APPLE_FRAMEWORKS ${Metal})
+
+    target_link_libraries(${CORE_LIBRARY_NAME} PRIVATE ${APPLE_FRAMEWORKS})
 endif ()
 
 if (NOT WIN32)

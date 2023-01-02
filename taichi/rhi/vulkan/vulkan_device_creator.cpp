@@ -306,6 +306,20 @@ void VulkanDeviceCreator::create_instance(uint32_t vk_api_version,
     create_info.pNext = &vf;
   }
 
+#if __APPLE__
+  VkExportMetalObjectCreateInfoEXT emoci{};
+  {
+    emoci.sType = VK_STRUCTURE_TYPE_EXPORT_METAL_OBJECT_CREATE_INFO_EXT;
+    emoci.exportObjectType = VkExportMetalObjectTypeFlagBitsEXT(
+        VK_EXPORT_METAL_OBJECT_TYPE_METAL_DEVICE_BIT_EXT |
+        VK_EXPORT_METAL_OBJECT_TYPE_METAL_BUFFER_BIT_EXT |
+        VK_EXPORT_METAL_OBJECT_TYPE_METAL_TEXTURE_BIT_EXT);
+
+    emoci.pNext = create_info.pNext;
+    create_info.pNext = &emoci;
+  }
+#endif // __APPLE__
+
   std::unordered_set<std::string> extensions;
   for (auto ext : get_required_extensions(params_.enable_validation_layer)) {
     extensions.insert(std::string(ext));

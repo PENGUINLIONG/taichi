@@ -154,8 +154,7 @@ def get_cmake_args():
 def cmake_install_manifest_filter(manifest_files):
     return [
         f for f in manifest_files
-        if f.endswith(('.so', 'pyd', '.bc', '.h',
-                       '.hpp')) or os.path.basename(f) == 'libMoltenVK.dylib'
+        if f.endswith(('.so', 'pyd', '.bc', '.h', '.hpp'))
     ]
 
 

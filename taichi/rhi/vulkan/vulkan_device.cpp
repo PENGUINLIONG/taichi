@@ -560,7 +560,7 @@ void VulkanPipeline::create_graphics_pipeline(
   dynamic_state.pDynamicStates =
       graphics_pipeline_template_->dynamic_state_enables.data();
   dynamic_state.dynamicStateCount =
-      graphics_pipeline_template_->dynamic_state_enables.size();
+      (uint32_t)graphics_pipeline_template_->dynamic_state_enables.size();
 
   VkGraphicsPipelineCreateInfo &pipeline_info =
       graphics_pipeline_template_->pipeline_info;
@@ -2280,50 +2280,46 @@ void VulkanDevice::create_vma_allocator() {
   allocatorInfo.device = device_;
   allocatorInfo.instance = instance_;
 
-  VolkDeviceTable table;
   VmaVulkanFunctions vk_vma_functions{nullptr};
-
-  volkLoadDeviceTable(&table, device_);
   vk_vma_functions.vkGetPhysicalDeviceProperties =
-      PFN_vkGetPhysicalDeviceProperties(vkGetInstanceProcAddr(
-          volkGetLoadedInstance(), "vkGetPhysicalDeviceProperties"));
+      PFN_vkGetPhysicalDeviceProperties(
+          vkGetInstanceProcAddr(instance_, "vkGetPhysicalDeviceProperties"));
   vk_vma_functions.vkGetPhysicalDeviceMemoryProperties =
       PFN_vkGetPhysicalDeviceMemoryProperties(vkGetInstanceProcAddr(
-          volkGetLoadedInstance(), "vkGetPhysicalDeviceMemoryProperties"));
-  vk_vma_functions.vkAllocateMemory = table.vkAllocateMemory;
-  vk_vma_functions.vkFreeMemory = table.vkFreeMemory;
-  vk_vma_functions.vkMapMemory = table.vkMapMemory;
-  vk_vma_functions.vkUnmapMemory = table.vkUnmapMemory;
-  vk_vma_functions.vkFlushMappedMemoryRanges = table.vkFlushMappedMemoryRanges;
+          instance_, "vkGetPhysicalDeviceMemoryProperties"));
+  vk_vma_functions.vkAllocateMemory = vkAllocateMemory;
+  vk_vma_functions.vkFreeMemory = vkFreeMemory;
+  vk_vma_functions.vkMapMemory = vkMapMemory;
+  vk_vma_functions.vkUnmapMemory = vkUnmapMemory;
+  vk_vma_functions.vkFlushMappedMemoryRanges = vkFlushMappedMemoryRanges;
   vk_vma_functions.vkInvalidateMappedMemoryRanges =
-      table.vkInvalidateMappedMemoryRanges;
-  vk_vma_functions.vkBindBufferMemory = table.vkBindBufferMemory;
-  vk_vma_functions.vkBindImageMemory = table.vkBindImageMemory;
+      vkInvalidateMappedMemoryRanges;
+  vk_vma_functions.vkBindBufferMemory = vkBindBufferMemory;
+  vk_vma_functions.vkBindImageMemory = vkBindImageMemory;
   vk_vma_functions.vkGetBufferMemoryRequirements =
-      table.vkGetBufferMemoryRequirements;
-  vk_vma_functions.vkGetImageMemoryRequirements =
-      table.vkGetImageMemoryRequirements;
-  vk_vma_functions.vkCreateBuffer = table.vkCreateBuffer;
-  vk_vma_functions.vkDestroyBuffer = table.vkDestroyBuffer;
-  vk_vma_functions.vkCreateImage = table.vkCreateImage;
-  vk_vma_functions.vkDestroyImage = table.vkDestroyImage;
-  vk_vma_functions.vkCmdCopyBuffer = table.vkCmdCopyBuffer;
+      vkGetBufferMemoryRequirements;
+  vk_vma_functions.vkGetImageMemoryRequirements = vkGetImageMemoryRequirements;
+  vk_vma_functions.vkCreateBuffer = vkCreateBuffer;
+  vk_vma_functions.vkDestroyBuffer = vkDestroyBuffer;
+  vk_vma_functions.vkCreateImage = vkCreateImage;
+  vk_vma_functions.vkDestroyImage = vkDestroyImage;
+  vk_vma_functions.vkCmdCopyBuffer = vkCmdCopyBuffer;
   vk_vma_functions.vkGetBufferMemoryRequirements2KHR =
-      table.vkGetBufferMemoryRequirements2KHR;
+      vkGetBufferMemoryRequirements2KHR;
   vk_vma_functions.vkGetImageMemoryRequirements2KHR =
-      table.vkGetImageMemoryRequirements2KHR;
-  vk_vma_functions.vkBindBufferMemory2KHR = table.vkBindBufferMemory2KHR;
-  vk_vma_functions.vkBindImageMemory2KHR = table.vkBindImageMemory2KHR;
+      vkGetImageMemoryRequirements2KHR;
+  vk_vma_functions.vkBindBufferMemory2KHR = vkBindBufferMemory2KHR;
+  vk_vma_functions.vkBindImageMemory2KHR = vkBindImageMemory2KHR;
   vk_vma_functions.vkGetPhysicalDeviceMemoryProperties2KHR =
       (PFN_vkGetPhysicalDeviceMemoryProperties2KHR)(std::max(
-          vkGetInstanceProcAddr(volkGetLoadedInstance(),
+          vkGetInstanceProcAddr(instance_,
                                 "vkGetPhysicalDeviceMemoryProperties2KHR"),
-          vkGetInstanceProcAddr(volkGetLoadedInstance(),
+          vkGetInstanceProcAddr(instance_,
                                 "vkGetPhysicalDeviceMemoryProperties2")));
   vk_vma_functions.vkGetDeviceBufferMemoryRequirements =
-      table.vkGetDeviceBufferMemoryRequirements;
+      vkGetDeviceBufferMemoryRequirements;
   vk_vma_functions.vkGetDeviceImageMemoryRequirements =
-      table.vkGetDeviceImageMemoryRequirements;
+      vkGetDeviceImageMemoryRequirements;
 
   allocatorInfo.pVulkanFunctions = &vk_vma_functions;
 
@@ -2418,11 +2414,6 @@ VkPresentModeKHR choose_swap_present_mode(
 
 VulkanSurface::VulkanSurface(VulkanDevice *device, const SurfaceConfig &config)
     : config_(config), device_(device) {
-#ifdef ANDROID
-  window_ = (ANativeWindow *)config.window_handle;
-#else
-  window_ = (GLFWwindow *)config.window_handle;
-#endif
   if (window_) {
     if (config.native_surface_handle) {
       surface_ = (VkSurfaceKHR)config.native_surface_handle;
@@ -2432,14 +2423,14 @@ VulkanSurface::VulkanSurface(VulkanDevice *device, const SurfaceConfig &config)
           .sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR,
           .pNext = nullptr,
           .flags = 0,
-          .window = window_};
+          .window = (ANativeWindow *)window_};
 
       vkCreateAndroidSurfaceKHR(device->vk_instance(), &createInfo, nullptr,
                                 &surface_);
-#else
+#elif !defined(__APPLE__) || defined(TARGET_OS_OSX)
       glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
       BAIL_ON_VK_BAD_RESULT_NO_RETURN(
-          glfwCreateWindowSurface(device->vk_instance(), window_, nullptr,
+          glfwCreateWindowSurface(device->vk_instance(), (GLFWwindow *)window_, nullptr,
                                   &surface_),
           "Failed to create window surface ({})");
 #endif
@@ -2515,10 +2506,10 @@ void VulkanSurface::create_swap_chain() {
 
   int width, height;
 #ifdef ANDROID
-  width = ANativeWindow_getWidth(window_);
-  height = ANativeWindow_getHeight(window_);
-#else
-  glfwGetFramebufferSize(window_, &width, &height);
+  width = ANativeWindow_getWidth((ANativeWindow *)window_);
+  height = ANativeWindow_getHeight((ANativeWindow *)window_);
+#elif !defined(__APPLE__) || defined(TARGET_OS_OSX)
+  glfwGetFramebufferSize((GLFWwindow *)window_, &width, &height);
 #endif
 
   VkExtent2D extent = {uint32_t(width), uint32_t(height)};

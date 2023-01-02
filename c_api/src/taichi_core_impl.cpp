@@ -243,6 +243,12 @@ TiRuntime ti_create_runtime(TiArch arch, uint32_t device_index) {
       break;
     }
 #endif  // TI_WITH_LLVM
+#ifdef TI_WITH_METAL
+    case TI_ARCH_METAL: {
+      out = (TiRuntime)(static_cast<Runtime *>(new VulkanRuntimeOwned));
+      break;
+    }
+#endif // TI_WITH_METAL
     default: {
       TI_CAPI_NOT_SUPPORTED(arch);
       return TI_NULL_HANDLE;

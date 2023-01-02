@@ -6,15 +6,11 @@ cmake_minimum_required(VERSION 3.0)
 # 1. Existence of circular dependencies in Taichi repo (https://github.com/taichi-dev/taichi/issues/6838)
 # 2. Link order restriction from `ld` linker on Linux (https://stackoverflow.com/questions/45135/why-does-the-order-in-which-libraries-are-linked-sometimes-cause-errors-in-gcc), which has zero-tolerance w.r.t circular dependencies.
 function(target_link_static_library TARGET OBJECT_TARGET)
-
-    set(STATIC_TARGET "${OBJECT_TARGET}_static")
-    add_library(${STATIC_TARGET})
-    target_link_libraries(${STATIC_TARGET} PUBLIC ${OBJECT_TARGET})
 if(LINUX)
     get_target_property(LINK_LIBS ${OBJECT_TARGET} LINK_LIBRARIES)
-    target_link_libraries(${TARGET} PRIVATE "-Wl,--start-group" "${STATIC_TARGET}" "${LINK_LIBS}" "-Wl,--end-group")
+    target_link_libraries(${TARGET} PRIVATE "-Wl,--start-group" "${OBJECT_TARGET}" "${LINK_LIBS}" "-Wl,--end-group")
 else()
-    target_link_libraries(${TARGET} PRIVATE "${STATIC_TARGET}")
+    target_link_libraries(${TARGET} PRIVATE "${OBJECT_TARGET}")
 endif()
 
 endfunction()
@@ -36,8 +32,8 @@ endif()
 
 if (TI_WITH_VULKAN)
   list(APPEND C_API_SOURCE "c_api/src/taichi_vulkan_impl.cpp")
-  if (APPLE)
-    install(FILES ${MoltenVK_LIBRARY} DESTINATION c_api/lib)
+  if (TI_WITH_METAL)
+    list(APPEND C_API_SOURCE "c_api/src/taichi_metal_impl.cpp")
   endif()
 endif()
 
@@ -45,7 +41,11 @@ if(TI_BUILD_TESTS)
   list(APPEND C_API_SOURCE "c_api/src/c_api_test_utils.cpp")
 endif()
 
-add_library(${TAICHI_C_API_NAME} SHARED ${C_API_SOURCE})
+if (TI_C_API_BUILD_STATIC)
+  add_library(${TAICHI_C_API_NAME} STATIC ${C_API_SOURCE})
+else()
+  add_library(${TAICHI_C_API_NAME} SHARED ${C_API_SOURCE})
+endif()
 target_link_static_library(${TAICHI_C_API_NAME} taichi_core)
 target_enable_function_level_linking(${TAICHI_C_API_NAME})
 
@@ -96,12 +96,6 @@ install(TARGETS ${TAICHI_C_API_NAME} EXPORT ${TAICHI_C_API_NAME}Targets
     INCLUDES DESTINATION c_api/include
     )
 
-# Install the export set, which contains the meta data of the target
-install(EXPORT ${TAICHI_C_API_NAME}Targets
-    FILE ${TAICHI_C_API_NAME}Targets.cmake
-    NAMESPACE ${TAICHI_C_API_NAME}::
-    DESTINATION c_api/${CMAKE_INSTALL_LIBDIR}/cmake/${TAICHI_C_API_NAME}
-    )
 
 include(CMakePackageConfigHelpers)
 

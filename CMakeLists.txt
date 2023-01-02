@@ -16,6 +16,7 @@ if (NOT DEFINED TI_VERSION_MAJOR)
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 execute_process(
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -203,6 +204,7 @@ if (TI_EXPORT_CORE)
 endif()
 
 option(TI_WITH_C_API "build taichi runtime c-api library" OFF)
+option(TI_C_API_BUILD_STATIC "build taichi runtime as static instead of shared library" OFF)
 
 if (TI_WITH_C_API)
   include(cmake/TaichiCAPI.cmake)
