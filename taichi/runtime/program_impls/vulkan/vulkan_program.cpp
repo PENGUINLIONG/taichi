@@ -7,7 +7,7 @@
 #include "taichi/runtime/gfx/aot_module_loader_impl.h"
 #include "taichi/util/offline_cache.h"
 
-#if !defined(ANDROID)
+#if TI_WITH_GGUI
 #include "GLFW/glfw3.h"
 #endif
 
@@ -16,6 +16,7 @@ using namespace taichi::lang::vulkan;
 namespace taichi::lang {
 
 namespace {
+#ifdef TI_WITH_GGUI
 std::vector<std::string> get_required_instance_extensions() {
 #ifdef ANDROID
   std::vector<std::string> extensions;
@@ -62,6 +63,7 @@ std::vector<std::string> get_required_device_extensions() {
 
   return extensions;
 }
+#endif  // TI_WITH_GGUI
 
 FunctionType register_params_to_executable(
     gfx::GfxRuntime::RegisterParams &&params,
@@ -85,9 +87,11 @@ FunctionType VulkanProgramImpl::compile(Kernel *kernel,
       vulkan_runtime_.get());
 }
 
+#ifdef TI_WITH_GGUI
 static void glfw_error_callback(int code, const char *description) {
   TI_WARN("GLFW Error {}: {}", code, description);
 }
+#endif  // TI_WITH_GGUI
 
 void VulkanProgramImpl::materialize_runtime(MemoryPool *memory_pool,
                                             KernelProfilerBase *profiler,
@@ -98,6 +102,7 @@ void VulkanProgramImpl::materialize_runtime(MemoryPool *memory_pool,
 // Android is meant to be embedded in other application only so the creation of
 // the device and other states is left to the caller/host.
 // The following code is only used when Taichi is running on its own.
+#ifdef TI_WITH_GGUI
 #ifndef ANDROID
   GLFWwindow *glfw_window = nullptr;
 
@@ -118,6 +123,7 @@ void VulkanProgramImpl::materialize_runtime(MemoryPool *memory_pool,
     }
   }
 #endif
+#endif // TI_WITH_GGUI
 
   VulkanDeviceCreator::Params evd_params;
   if (config->vk_api_version.empty()) {
@@ -138,6 +144,7 @@ void VulkanProgramImpl::materialize_runtime(MemoryPool *memory_pool,
     TI_WARN("Enabling vulkan validation layer in debug mode");
     evd_params.enable_validation_layer = true;
   }
+#ifdef TI_WITH_GGUI
 #if !defined(ANDROID)
   if (glfw_window) {
     // then we should be able to create a device with graphics abilities
@@ -159,6 +166,7 @@ void VulkanProgramImpl::materialize_runtime(MemoryPool *memory_pool,
     };
   }
 #endif
+#endif // TI_WITH_GGUI
 
   embedded_device_ = std::make_unique<VulkanDeviceCreator>(evd_params);
 

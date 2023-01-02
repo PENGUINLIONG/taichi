@@ -145,3 +145,9 @@ if (TI_USE_MPI)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DTI_USE_MPI")
     message("Using MPI")
 endif ()
+
+# FIXME: (penguinliong) Workaround the overwhelming truncation errors compiling
+# to iOS.
+if (XCODE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-shorten-64-to-32")
+endif()

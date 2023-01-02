@@ -2418,6 +2418,7 @@ VulkanSurface::VulkanSurface(VulkanDevice *device, const SurfaceConfig &config)
     if (config.native_surface_handle) {
       surface_ = (VkSurfaceKHR)config.native_surface_handle;
     } else {
+#ifdef TI_WITH_GGUI
 #ifdef ANDROID
       VkAndroidSurfaceCreateInfoKHR createInfo{
           .sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR,
@@ -2427,13 +2428,14 @@ VulkanSurface::VulkanSurface(VulkanDevice *device, const SurfaceConfig &config)
 
       vkCreateAndroidSurfaceKHR(device->vk_instance(), &createInfo, nullptr,
                                 &surface_);
-#elif !defined(__APPLE__) || defined(TARGET_OS_OSX)
+#else
       glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
       BAIL_ON_VK_BAD_RESULT_NO_RETURN(
           glfwCreateWindowSurface(device->vk_instance(), (GLFWwindow *)window_, nullptr,
                                   &surface_),
           "Failed to create window surface ({})");
 #endif
+#endif // TI_WITH_GGUI
     }
 
     create_swap_chain();
@@ -2504,13 +2506,15 @@ void VulkanSurface::create_swap_chain() {
   VkPresentModeKHR present_mode =
       choose_swap_present_mode(present_modes, config_.vsync, config_.adaptive);
 
-  int width, height;
+  int width = 0, height = 0;
+#ifdef TI_WITH_GGUI
 #ifdef ANDROID
   width = ANativeWindow_getWidth((ANativeWindow *)window_);
   height = ANativeWindow_getHeight((ANativeWindow *)window_);
-#elif !defined(__APPLE__) || defined(TARGET_OS_OSX)
+#else
   glfwGetFramebufferSize((GLFWwindow *)window_, &width, &height);
 #endif
+#endif // TI_WITH_GGUI
 
   VkExtent2D extent = {uint32_t(width), uint32_t(height)};
   extent.width =

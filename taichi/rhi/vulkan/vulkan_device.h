@@ -4,11 +4,13 @@
 
 #include <vk_mem_alloc.h>
 
+#ifdef TI_WITH_GGUI
 #ifdef ANDROID
 #include <android/native_window_jni.h>
-#elif !defined(__APPLE__) || defined(TARGET_OS_OSX)
+#else
 #include <GLFW/glfw3.h>
 #endif
+#endif  // TI_WITH_GGUI
 
 #include <memory>
 #include <optional>

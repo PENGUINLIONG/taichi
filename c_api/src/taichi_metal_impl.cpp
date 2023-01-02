@@ -1,3 +1,8 @@
+// FIXME: (penguinliong) Remove this.
+#ifdef TI_WITH_METAL2
+#define TI_WITH_METAL 1
+#endif // TI_WITH_METAL2
+
 #ifdef TI_WITH_METAL
 #include "taichi_metal_impl.h"
 

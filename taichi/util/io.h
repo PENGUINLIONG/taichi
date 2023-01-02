@@ -33,8 +33,7 @@ inline void create_directories(const std::string &dir) {
 #if defined(TI_PLATFORM_WINDOWS)
   std::filesystem::create_directories(dir);
 #else
-  int return_code = std::system(fmt::format("mkdir -p {}", dir).c_str());
-  if (return_code != 0) {
+  if (mkdir(dir.c_str(), S_IRWXU | S_IRWXG | S_IRWXO) == -1) {
     throw std::runtime_error(
         fmt::format("Unable to create directory at: {dir}").c_str());
   }

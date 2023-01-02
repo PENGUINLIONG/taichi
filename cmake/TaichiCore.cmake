@@ -1,6 +1,7 @@
 option(USE_STDCPP "Use -stdlib=libc++" ON)
 option(TI_WITH_LLVM "Build with LLVM backends" ON)
 option(TI_WITH_METAL "Build with the Metal backend" ON)
+option(TI_WITH_METAL2 "Build with the Metal backend" ON)
 option(TI_WITH_CUDA "Build with the CUDA backend" ON)
 option(TI_WITH_CUDA_TOOLKIT "Build with the CUDA toolkit" OFF)
 option(TI_WITH_OPENGL "Build with the OpenGL backend" ON)
@@ -60,10 +61,6 @@ if (WIN32)
         set(TI_WITH_CC OFF)
         message(WARNING "C backend not supported on Windows. Setting TI_WITH_CC to OFF.")
     endif()
-endif()
-
-if(TI_WITH_VULKAN)
-    set(TI_WITH_GGUI ON)
 endif()
 
 if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/external/glad/src/gl.c")
@@ -136,8 +133,7 @@ target_include_directories(${CORE_LIBRARY_NAME} PRIVATE external/PicoSHA2)
 target_include_directories(${CORE_LIBRARY_NAME} PRIVATE external/eigen)
 target_include_directories(${CORE_LIBRARY_NAME} PRIVATE external/FP16/include)
 
-# GLFW not available on Android
-if (TI_WITH_OPENGL OR TI_WITH_VULKAN AND NOT ANDROID)
+if (TI_WITH_OPENGL OR TI_WITH_GGUI)
   set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
   set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
   set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -256,8 +252,8 @@ add_subdirectory(taichi/util)
 add_subdirectory(taichi/common)
 add_subdirectory(taichi/rhi/interop)
 
-target_link_libraries(${CORE_LIBRARY_NAME} PRIVATE taichi_util)
-target_link_libraries(${CORE_LIBRARY_NAME} PRIVATE taichi_common)
+target_link_libraries(${CORE_LIBRARY_NAME} PUBLIC taichi_util)
+target_link_libraries(${CORE_LIBRARY_NAME} PUBLIC taichi_common)
 target_link_libraries(${CORE_LIBRARY_NAME} PRIVATE interop_rhi)
 
 if (TI_WITH_CUDA AND TI_WITH_CUDA_TOOLKIT)
@@ -282,6 +278,10 @@ if (TI_WITH_METAL)
     target_link_libraries(${CORE_LIBRARY_NAME} PRIVATE metal_program_impl)
 endif()
 
+if (TI_WITH_METAL2)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DTI_WITH_METAL2")
+endif()
+
 if (TI_WITH_OPENGL)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DTI_WITH_OPENGL")
 
@@ -299,7 +299,11 @@ if (TI_WITH_DX11)
 endif()
 
 # SPIR-V codegen is always there, regardless of Vulkan
-set(SPIRV_SKIP_EXECUTABLES true)
+set(SPIRV_SHARED_LIBRARIES OFF)
+set(SPIRV_SKIP_EXECUTABLES ON)
+set(SPIRV_SKIP_TESTS ON)
+set(SKIP_SPIRV_TOOLS_INSTALL ON)
+set(SPIRV_TOOLS_BUILD_STATIC ON)
 set(SPIRV-Headers_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/SPIRV-Headers)
 
 add_subdirectory(external/SPIRV-Tools)
@@ -307,7 +311,7 @@ add_subdirectory(taichi/codegen/spirv)
 add_subdirectory(taichi/cache/gfx)
 add_subdirectory(taichi/runtime/gfx)
 
-if (TI_WITH_OPENGL OR TI_WITH_VULKAN OR TI_WITH_DX11)
+if (TI_WITH_OPENGL OR TI_WITH_VULKAN OR TI_WITH_METAL2 OR TI_WITH_DX11)
   target_link_libraries(${CORE_LIBRARY_NAME} PRIVATE spirv_codegen)
   target_link_libraries(${CORE_LIBRARY_NAME} PRIVATE gfx_runtime)
 endif()
@@ -388,13 +392,13 @@ foreach (source IN LISTS TAICHI_CORE_SOURCE)
     source_group("${source_path_msvc}" FILES "${source}")
 endforeach ()
 
-# TODO Use TI_WITH_UI to guard the compilation of this target.
-# This requires refactoring on the python/export_*.cpp as well as better
-# error message on the Python side.
-add_subdirectory(taichi/ui)
-target_link_libraries(taichi_ui PUBLIC ${CORE_LIBRARY_NAME})
-
 if(TI_WITH_PYTHON)
+    # TODO Use TI_WITH_UI to guard the compilation of this target.
+    # This requires refactoring on the python/export_*.cpp as well as better
+    # error message on the Python side.
+    add_subdirectory(taichi/ui)
+    target_link_libraries(taichi_ui PUBLIC ${CORE_LIBRARY_NAME})
+
     message("PYTHON_LIBRARIES: " ${PYTHON_LIBRARIES})
     set(CORE_WITH_PYBIND_LIBRARY_NAME taichi_python)
     # Cannot compile Python source code with Android, but TI_EXPORT_CORE should be set and
@@ -446,7 +450,7 @@ if(TI_WITH_PYTHON)
         ${PROJECT_SOURCE_DIR}/external/VulkanMemoryAllocator/include
       )
 
-    if (NOT ANDROID)
+    if (TI_WITH_GGUI)
       target_include_directories(${CORE_WITH_PYBIND_LIBRARY_NAME}
         PRIVATE
           external/glfw/include

@@ -76,9 +76,10 @@ template <typename... Args>
 inline int execute(std::string fmt, Args &&...args) {
   auto cmd = fmt::format(fmt, std::forward<Args>(args)...);
   TI_TRACE("Executing command: {}", cmd);
-  int ret = std::system(cmd.c_str());
-  TI_TRACE("Command exit status: {}", ret);
-  return ret;
+  // int ret = std::system(cmd.c_str());
+  // TI_TRACE("Command exit status: {}", ret);
+  // return ret;
+  return 0;
 }
 
 }  // namespace cccp

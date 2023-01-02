@@ -5,6 +5,12 @@
 #include <exception>
 #include <stdexcept>
 
+
+// FIXME: (penguinliong) Remove this.
+#ifdef TI_WITH_METAL2
+#define TI_WITH_METAL 1
+#endif // TI_WITH_METAL2
+
 // Taichi runtime is not necessarily using the same 3rd-party headers as the
 // user codes. For C-API implementations we only use the internal headers.
 #ifdef TI_WITH_VULKAN
