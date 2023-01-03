@@ -46,7 +46,7 @@
 	url = https://github.com/KhronosGroup/SPIRV-Reflect
 [submodule "external/SPIRV-Tools"]
 	path = external/SPIRV-Tools
-	url = https://github.com/KhronosGroup/SPIRV-Tools
+	url = https://github.com/PENGUINLIONG/SPIRV-Tools
 [submodule "external/SPIRV-Cross"]
 	path = external/SPIRV-Cross
 	url = https://github.com/KhronosGroup/SPIRV-Cross
