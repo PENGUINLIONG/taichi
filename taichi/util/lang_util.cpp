@@ -84,22 +84,6 @@ real measure_cpe(std::function<void()> target,
   return elasped_cycles / float64(total_batches * elements_per_call);
 }
 
-bool command_exist(const std::string &command) {
-#if defined(TI_PLATFORM_UNIX)
-  if (std::system(fmt::format("which {} > /dev/null 2>&1", command).c_str())) {
-    return false;
-  } else {
-    return true;
-  }
-#else
-  if (std::system(fmt::format("where {} >nul 2>nul", command).c_str())) {
-    return false;
-  } else {
-    return true;
-  }
-#endif
-}
-
 }  // namespace taichi::lang
 namespace taichi {
 void initialize_benchmark() {
