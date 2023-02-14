@@ -320,6 +320,10 @@ def generate_module_header(module):
 
 if __name__ == "__main__":
     builtin_tys = {
+        BuiltInType("uint8_t", "uint8_t"),
+        BuiltInType("int8_t", "int8_t"),
+        BuiltInType("uint16_t", "uint16_t"),
+        BuiltInType("int16_t", "int16_t"),
         BuiltInType("uint64_t", "uint64_t"),
         BuiltInType("int64_t", "int64_t"),
         BuiltInType("uint32_t", "uint32_t"),
