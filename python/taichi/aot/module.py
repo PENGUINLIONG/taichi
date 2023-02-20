@@ -1,3 +1,5 @@
+from enum import Enum
+from typing import Any
 import warnings
 from contextlib import contextmanager
 from glob import glob
@@ -12,6 +14,7 @@ from taichi.lang import impl, kernel_impl
 from taichi.lang.field import ScalarField
 from taichi.lang.matrix import MatrixField
 from taichi.types.annotations import template
+from taichi.tools.virtual_dir import VirtualDir
 
 import taichi
 
@@ -63,7 +66,7 @@ class KernelTemplate:
         self._aot_module._kernels.append(kernel)
 
 
-class Module:
+class Module(VirtualDir):
     """An AOT module to save and load Taichi kernels.
 
     This module serializes the Taichi kernels for a specific arch. The
@@ -89,6 +92,8 @@ class Module:
           arch: Target backend architecture. Default to the one initialized in :func:`~taichi.lang.init` if not specified.
           caps (List[str]): Enabled device capabilities.
         """
+        super().__init__(".tcm")
+
         if caps is None:
             caps = []
         curr_arch = impl.current_cfg().arch
@@ -208,7 +213,7 @@ class Module:
         kt = KernelTemplate(kernel_fn, self)
         yield kt
 
-    def save(self, filepath):
+    def save(self, filepath: str | Path):
         """
         Args:
           filepath (str): path to a folder to store aot files.
@@ -220,25 +225,10 @@ class Module:
         with open(f"{filepath}/__version__", "w") as f:
             f.write('.'.join(str(x) for x in taichi.__version__))
 
-    def archive(self, filepath: str):
+    def archive(self, path: str | Path):
         """
+        Save files to a TCM archive.
         Args:
-          filepath (str): path to the stored archive of aot artifacts, MUST
-            end with `.tcm`.
+            path: The path to the zip archive. The path must end with `.tcm`.
         """
-        assert filepath.endswith(".tcm"), \
-            "AOT module artifact archive must ends with .tcm"
-        tcm_path = Path(filepath).absolute()
-        assert tcm_path.parent.exists(), "Output directory doesn't exist"
-
-        temp_dir = mkdtemp(prefix="tcm_")
-        # Save first as usual.
-        self.save(temp_dir)
-
-        # Package all artifacts into a zip archive and attach contend data.
-        with ZipFile(tcm_path, "w") as z:
-            for path in glob(f"{temp_dir}/*", recursive=True):
-                z.write(path, Path.relative_to(Path(path), temp_dir))
-
-        # Remove cached files
-        rmtree(temp_dir)
+        super().archive(path)

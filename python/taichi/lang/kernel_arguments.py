@@ -91,17 +91,16 @@ def decl_ndarray_arg(dtype, dim, element_shape, layout):
 
 def decl_texture_arg(num_dimensions):
     # FIXME: texture_arg doesn't have element_shape so better separate them
-    arg_id = impl.get_runtime().compiling_callable.insert_texture_param(f32)
+    arg_id = impl.get_runtime().compiling_callable.insert_texture_param(f32, num_dimensions)
     return TextureSampler(
         _ti_core.make_texture_ptr_expr(arg_id, num_dimensions), num_dimensions)
 
 
-def decl_rw_texture_arg(num_dimensions, num_channels, channel_format, lod):
+def decl_rw_texture_arg(num_dimensions, buffer_format, lod):
     # FIXME: texture_arg doesn't have element_shape so better separate them
-    arg_id = impl.get_runtime().compiling_callable.insert_texture_param(f32)
+    arg_id = impl.get_runtime().compiling_callable.insert_rw_texture_param(f32, num_dimensions, buffer_format)
     return RWTextureAccessor(
-        _ti_core.make_rw_texture_ptr_expr(arg_id, num_dimensions, num_channels,
-                                          channel_format, lod), num_dimensions)
+        _ti_core.make_rw_texture_ptr_expr(arg_id, num_dimensions, buffer_format, lod), num_dimensions)
 
 
 def decl_ret(dtype, real_func=False):

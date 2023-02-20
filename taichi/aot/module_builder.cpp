@@ -1,4 +1,8 @@
 #include "taichi/aot/module_builder.h"
+#include <fstream>
+#include "taichi/common/json.h"
+#include "taichi/common/json_serde.h"
+#include "taichi/common/serialization.h"
 #include "taichi/program/kernel.h"
 
 namespace taichi::lang {
@@ -46,8 +50,9 @@ void AotModuleBuilder::load(const std::string &output_dir) {
 }
 
 void AotModuleBuilder::dump_graph(std::string output_dir) const {
-  const std::string graph_file = fmt::format("{}/graphs.tcb", output_dir);
-  write_to_binary_file(graphs_, graph_file);
+  std::string json_lit = liong::json::print(liong::json::serialize(graphs_));
+  std::fstream f(output_dir + "/graphs.json", std::ios::out | std::ios::trunc);
+  f.write((const char *)json_lit.data(), json_lit.size());
 }
 
 void AotModuleBuilder::add_graph(const std::string &name,

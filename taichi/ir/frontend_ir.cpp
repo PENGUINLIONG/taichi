@@ -156,7 +156,7 @@ void TexturePtrExpression::type_check(const CompileConfig *config) {
 void TexturePtrExpression::flatten(FlattenContext *ctx) {
   ctx->push_back<ArgLoadStmt>(arg_id, PrimitiveType::f32, true);
   ctx->push_back<TexturePtrStmt>(ctx->back_stmt(), num_dims, is_storage,
-                                 num_channels, channel_format, lod);
+                                 format, lod);
   stmt = ctx->back_stmt();
 }
 

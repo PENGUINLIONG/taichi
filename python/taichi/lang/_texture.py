@@ -130,12 +130,8 @@ class Texture:
         shape (Tuple[int]): Shape of the Texture.
     """
     def __init__(self, fmt, arr_shape):
-        dtype, num_channels = FORMAT2TY_CH[fmt]
-        self.tex = impl.get_runtime().prog.create_texture(
-            dtype, num_channels, arr_shape)
+        self.tex = impl.get_runtime().prog.create_texture(fmt, arr_shape)
         self.fmt = fmt
-        self.dtype = dtype
-        self.num_channels = num_channels
         self.num_dims = len(arr_shape)
         self.shape = arr_shape
 

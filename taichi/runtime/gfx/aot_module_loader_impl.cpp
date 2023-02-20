@@ -80,7 +80,6 @@ class AotModuleImpl : public aot::Module {
         TI_WARN("'graphs.json' cannot be read");
         return;
       }
-
       auto json = liong::json::parse(
           (const char *)graphs_json.data(),
           (const char *)(graphs_json.data() + graphs_json.size()));
